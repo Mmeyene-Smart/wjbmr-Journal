@@ -4,7 +4,6 @@ import About from './components/About';
 import Current from './components/Current';
 import Archives from './components/Archives';
 import Guidelines from './components/Guidelines';
-import SubmitManuscript from './components/SubmitManuscript';
 import AdminPanel from './components/AdminPanel';
 import ArticleDetail from './components/ArticleDetail';
 import { ArrowRight, Menu, X, BookOpen, GraduationCap, Mail, ShieldAlert, Key } from 'lucide-react';
@@ -33,6 +32,17 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('wjbmr_articles', JSON.stringify(articles));
   }, [articles]);
+
+  // URL Query Param Listener (?admin=true)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('admin') === 'true') {
+      setShowAdminLogin(true);
+      // Clean query parameter from URL for clean presentation
+      const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+      window.history.replaceState({ path: newUrl }, '', newUrl);
+    }
+  }, []);
 
   // Admin login states
   const [showAdminLogin, setShowAdminLogin] = useState(false);
@@ -94,14 +104,13 @@ export default function App() {
           <Current 
             articles={articles} 
             onNavigateToArticle={handleNavigateToArticle}
+            onNavigate={handleNavigate}
           />
         );
       case 'Archives':
         return <Archives onNavigate={handleNavigate} />;
       case 'Guidelines':
         return <Guidelines />;
-      case 'Submit':
-        return <SubmitManuscript />;
       case 'Admin':
         return isAdminAuthenticated ? (
           <AdminPanel 
@@ -194,14 +203,17 @@ export default function App() {
             )}
           </div>
 
-          {/* Submit Action Pill Button (matches Ref 1 submit button) */}
+          {/* Admin Logout Button in Navbar (only visible when authenticated) */}
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <button
-              onClick={() => handleNavigate('Submit')}
-              className={`submit-btn ${currentPage === 'Submit' ? 'active' : ''}`}
-            >
-              Submit Manuscript <ArrowRight size={16} />
-            </button>
+            {isAdminAuthenticated && (
+              <button
+                onClick={handleLogoutAdmin}
+                className="submit-btn"
+                style={{ borderColor: '#dc2626', color: '#dc2626', gap: '8px' }}
+              >
+                Logout Admin <ShieldAlert size={16} />
+              </button>
+            )}
 
             {/* Mobile Hamburger menu icon */}
             <button 
@@ -254,13 +266,13 @@ export default function App() {
             ))}
             {isAdminAuthenticated && (
               <button
-                onClick={() => handleNavigate('Admin')}
+                onClick={handleLogoutAdmin}
                 style={{
                   textAlign: 'left',
                   padding: '8px 16px',
                   borderRadius: 'var(--radius-sm)',
                   border: 'none',
-                  backgroundColor: currentPage === 'Admin' ? 'var(--primary-light)' : 'transparent',
+                  backgroundColor: 'transparent',
                   color: '#dc2626',
                   fontWeight: '600',
                   fontSize: '14px',
@@ -268,7 +280,7 @@ export default function App() {
                   cursor: 'pointer'
                 }}
               >
-                Admin Panel
+                Logout Admin
               </button>
             )}
           </div>
