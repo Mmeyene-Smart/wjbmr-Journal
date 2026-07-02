@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, Download, Share2, MessageSquare, ChevronDown, ChevronUp, Search as SearchIcon, Minus, Plus } from 'lucide-react';
 
-export default function Current({ articles = [] }) {
+export default function Current({ articles = [], onNavigateToArticle }) {
   const [expandedId, setExpandedId] = useState(null);
   
   // Sidebar state
@@ -306,7 +306,18 @@ export default function Current({ articles = [] }) {
                         {art.type || art.category} | PAGES: {art.pages} | {art.volume}
                       </span>
                       
-                      <h4 style={{ fontSize: '17px', color: 'var(--primary-dark)', lineHeight: '1.4' }}>
+                      <h4 
+                        onClick={() => onNavigateToArticle(art.id)}
+                        style={{ 
+                          fontSize: '17px', 
+                          color: 'var(--primary-color)', 
+                          lineHeight: '1.4',
+                          cursor: 'pointer',
+                          transition: 'var(--transition)'
+                        }}
+                        onMouseEnter={(e) => e.target.style.color = 'var(--accent-color)'}
+                        onMouseLeave={(e) => e.target.style.color = 'var(--primary-color)'}
+                      >
                         {art.title}
                       </h4>
                       

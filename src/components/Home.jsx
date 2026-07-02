@@ -48,7 +48,7 @@ const MOCK_PUBLICATIONS = [
   }
 ];
 
-export default function Home({ onNavigate, articles = [] }) {
+export default function Home({ onNavigate, onNavigateToArticle, articles = [] }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
@@ -303,7 +303,7 @@ export default function Home({ onNavigate, articles = [] }) {
                   <div key={pub.id} className="publication-card">
                     <div className="pub-info">
                       <div className="pub-category">{pub.category}</div>
-                      <div className="pub-title" onClick={() => onNavigate('Current')}>{pub.title}</div>
+                      <div className="pub-title" onClick={() => onNavigateToArticle(pub.id)}>{pub.title}</div>
                       <div className="pub-authors">
                         {pub.authors.map((auth, index) => (
                           <React.Fragment key={index}>

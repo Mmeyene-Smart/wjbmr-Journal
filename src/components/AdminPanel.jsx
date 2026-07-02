@@ -5,8 +5,11 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
   const [formData, setFormData] = useState({
     title: '',
     authors: '',
+    affiliations: '',
+    correspondingAuthor: '',
+    keywords: '',
     category: 'ORIGINAL RESEARCH',
-    volume: 'Vol 12 (2026)',
+    volume: 'Volume 12 (2026)',
     issue: 'Issue 2 (June 2026)',
     pages: '',
     doi: '',
@@ -51,6 +54,9 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
     const newErrors = {};
     if (!formData.title.trim()) newErrors.title = 'Manuscript title is required';
     if (!formData.authors.trim()) newErrors.authors = 'Authors are required (comma separated)';
+    if (!formData.affiliations.trim()) newErrors.affiliations = 'Institutional affiliations are required';
+    if (!formData.correspondingAuthor.trim()) newErrors.correspondingAuthor = 'Corresponding author details are required';
+    if (!formData.keywords.trim()) newErrors.keywords = 'Keywords are required';
     if (!formData.pages.trim()) newErrors.pages = 'Page range is required (e.g. 139 - 148)';
     if (!formData.doi.trim()) newErrors.doi = 'DOI is required';
     if (!htmlContent.trim()) newErrors.htmlFile = 'HTML file upload is required';
@@ -70,6 +76,9 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
       title: formData.title,
       // Parse authors to standard structure
       authors: formData.authors.split(',').map(auth => ({ name: auth.trim(), profile: '#' })),
+      affiliations: formData.affiliations,
+      correspondingAuthor: formData.correspondingAuthor,
+      keywords: formData.keywords,
       date: formData.date,
       readTime: '10 min read',
       pdfUrl: '#',
@@ -90,8 +99,11 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
     setFormData({
       title: '',
       authors: '',
+      affiliations: '',
+      correspondingAuthor: '',
+      keywords: '',
       category: 'ORIGINAL RESEARCH',
-      volume: 'Vol 12 (2026)',
+      volume: 'Volume 12 (2026)',
       issue: 'Issue 2 (June 2026)',
       pages: '',
       doi: '',
@@ -155,6 +167,8 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
           <h3 style={{ fontSize: '20px', marginBottom: '24px', color: 'var(--primary-dark)' }}>Publish New Article</h3>
           
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            
+            {/* Title */}
             <div className="form-group">
               <label className="form-label">Article Title *</label>
               <input 
@@ -162,12 +176,13 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
                 name="title" 
                 value={formData.title} 
                 onChange={handleInputChange} 
-                placeholder="Enter publication title..."
+                placeholder="e.g. Record-Keeping Habits Among Grain Marketers in Uyo Metropolis..."
                 className="form-input" 
               />
               {errors.title && <div style={{ color: '#dc2626', fontSize: '12px' }}>{errors.title}</div>}
             </div>
 
+            {/* Authors */}
             <div className="form-group">
               <label className="form-label">Authors * (comma separated)</label>
               <input 
@@ -175,12 +190,55 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
                 name="authors" 
                 value={formData.authors} 
                 onChange={handleInputChange} 
-                placeholder="e.g. Dr. Ukeme D. Archibong, Dr. Juliet U. Don, Prof. Kofon G. Nkanta"
+                placeholder="e.g. Akpan, OD., Bassey, EA."
                 className="form-input" 
               />
               {errors.authors && <div style={{ color: '#dc2626', fontSize: '12px' }}>{errors.authors}</div>}
             </div>
 
+            {/* Affiliations */}
+            <div className="form-group">
+              <label className="form-label">Institutional Affiliations * (use linebreaks for multiple)</label>
+              <textarea 
+                name="affiliations" 
+                rows="3"
+                value={formData.affiliations} 
+                onChange={handleInputChange} 
+                placeholder="e.g. Department of Agricultural Economics, University of Uyo, Uyo, Nigeria"
+                className="form-textarea" 
+              ></textarea>
+              {errors.affiliations && <div style={{ color: '#dc2626', fontSize: '12px' }}>{errors.affiliations}</div>}
+            </div>
+
+            {/* Corresponding Author details */}
+            <div className="form-group">
+              <label className="form-label">Corresponding Author Contacts *</label>
+              <input 
+                type="text" 
+                name="correspondingAuthor" 
+                value={formData.correspondingAuthor} 
+                onChange={handleInputChange} 
+                placeholder="e.g. drodakpan@uniuyo.edu.ng; +234-8032717955"
+                className="form-input" 
+              />
+              {errors.correspondingAuthor && <div style={{ color: '#dc2626', fontSize: '12px' }}>{errors.correspondingAuthor}</div>}
+            </div>
+
+            {/* Keywords */}
+            <div className="form-group">
+              <label className="form-label">Keywords * (comma separated)</label>
+              <input 
+                type="text" 
+                name="keywords" 
+                value={formData.keywords} 
+                onChange={handleInputChange} 
+                placeholder="e.g. record keeping, grains, marketers, Uyo, Nigeria"
+                className="form-input" 
+              />
+              {errors.keywords && <div style={{ color: '#dc2626', fontSize: '12px' }}>{errors.keywords}</div>}
+            </div>
+
+            {/* Category and Volume */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
               <div className="form-group">
                 <label className="form-label">Section Category *</label>
@@ -198,10 +256,13 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
                   <option value="Volume 12 (2026)">Volume 12 (2026)</option>
                   <option value="Volume 11 (2025)">Volume 11 (2025)</option>
                   <option value="Volume 10 (2024)">Volume 10 (2024)</option>
+                  <option value="Volume 7 (2025)">Volume 7 (2025)</option>
+                  <option value="Volume 6 (2024)">Volume 6 (2024)</option>
                 </select>
               </div>
             </div>
 
+            {/* Issue, Pages, DOI */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
               <div className="form-group">
                 <label className="form-label">Issue *</label>
@@ -212,6 +273,8 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
                   <option value="Issue 3 (September 2025)">Issue 3 (September)</option>
                   <option value="Issue 2 (June 2025)">Issue 2 (June)</option>
                   <option value="Issue 1 (March 2025)">Issue 1 (March)</option>
+                  <option value="Issue 1 (2025)">Issue 1 (2025)</option>
+                  <option value="Issue 1 (2024)">Issue 1 (2024)</option>
                 </select>
               </div>
 
