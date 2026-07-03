@@ -354,8 +354,15 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                       </button>
 
                       <a 
-                        href="#"
-                        onClick={(e) => { e.preventDefault(); alert("PDF Simulated Download"); }}
+                        href={art.pdfUrl || '#'}
+                        onClick={(e) => {
+                          if (!art.pdfUrl || art.pdfUrl === '#') {
+                            e.preventDefault();
+                            alert("PDF Simulated Download");
+                          }
+                        }}
+                        target={art.pdfUrl && art.pdfUrl !== '#' ? '_blank' : undefined}
+                        rel="noopener noreferrer"
                         style={{
                           padding: '6px 14px',
                           borderRadius: 'var(--radius-full)',

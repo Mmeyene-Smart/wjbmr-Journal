@@ -18,9 +18,11 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
     .filter(art => art.id !== article.id)
     .slice(0, 5); // display up to 5 related articles
 
-  const handleDownloadSimulate = (e) => {
-    e.preventDefault();
-    alert(`Downloading PDF for: "${article.title}"... (Simulated)`);
+  const handleDownload = (e) => {
+    if (!article.pdfUrl || article.pdfUrl === '#') {
+      e.preventDefault();
+      alert(`Downloading PDF for: "${article.title}"... (Simulated)`);
+    }
   };
 
   const getAuthorsDisplay = () => {
@@ -71,8 +73,10 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
                 <BookOpen size={15} /> {article.volume || 'Volume 12'} No {article.issue ? article.issue.split(' ')[1] : '2'}
               </span>
               <a 
-                href="#" 
-                onClick={handleDownloadSimulate}
+                href={article.pdfUrl || '#'} 
+                onClick={handleDownload}
+                target={article.pdfUrl && article.pdfUrl !== '#' ? '_blank' : undefined}
+                rel="noopener noreferrer"
                 style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
@@ -135,18 +139,26 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
                 </span>
               </div>
               
-              <button 
-                onClick={handleDownloadSimulate}
+              <a 
+                href={article.pdfUrl || '#'} 
+                onClick={handleDownload}
+                target={article.pdfUrl && article.pdfUrl !== '#' ? '_blank' : undefined}
+                rel="noopener noreferrer"
                 className="submit-form-btn"
                 style={{
                   width: 'auto',
                   padding: '10px 20px',
                   fontSize: '13px',
-                  background: 'var(--primary-color)'
+                  background: 'var(--primary-color)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  textDecoration: 'none',
+                  color: 'var(--bg-white)'
                 }}
               >
                 <Download size={16} /> Download Full PDF (Top)
-              </button>
+              </a>
             </div>
 
             {/* 5. Abstract & Full HTML Content Render */}
@@ -186,21 +198,26 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
               paddingTop: '32px',
               marginTop: '40px'
             }}>
-              <button 
-                onClick={handleDownloadSimulate}
+              <a 
+                href={article.pdfUrl || '#'} 
+                onClick={handleDownload}
+                target={article.pdfUrl && article.pdfUrl !== '#' ? '_blank' : undefined}
+                rel="noopener noreferrer"
                 className="submit-form-btn"
                 style={{
                   width: 'auto',
                   padding: '12px 30px',
                   fontSize: '14px',
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
                   gap: '8px',
-                  background: 'var(--primary-color)'
+                  background: 'var(--primary-color)',
+                  textDecoration: 'none',
+                  color: 'var(--bg-white)'
                 }}
               >
                 <Download size={18} /> Download Full PDF (Bottom)
-              </button>
+              </a>
             </div>
 
           </div>

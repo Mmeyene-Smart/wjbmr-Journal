@@ -13,25 +13,22 @@ export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeArticleId, setActiveArticleId] = useState(null);
   
-  // Articles state initialized from localStorage.
-  // Enforces admin-only uploads by defaulting to empty array if not present.
-  const [articles, setArticles] = useState(() => {
-    const saved = localStorage.getItem('wjbmr_articles');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      } catch (e) {
-        console.error("Failed to parse saved articles", e);
-      }
-    }
-    return []; // Empty by default!
-  });
+  const [articles, setArticles] = useState([]);
 
-  // Save to localStorage when articles change
+  // Fetch articles from backend API on mount
   useEffect(() => {
-    localStorage.setItem('wjbmr_articles', JSON.stringify(articles));
-  }, [articles]);
+    fetch('/api/articles')
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch articles');
+        return res.json();
+      })
+      .then(data => {
+        if (Array.isArray(data)) {
+          setArticles(data);
+        }
+      })
+      .catch(err => console.error("Error loading articles from DB:", err));
+  }, []);
 
   // URL Query Param Listener (?admin=true)
   useEffect(() => {

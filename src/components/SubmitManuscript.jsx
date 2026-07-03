@@ -92,13 +92,41 @@ export default function SubmitManuscript() {
 
     setIsSubmitting(true);
 
-    // Mock API submission wait
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setStep(4);
-      // Trigger canvas-confetti for premium feel
-      triggerSuccessConfetti();
-    }, 1500);
+    const postData = new FormData();
+    postData.append('title', formData.title);
+    postData.append('abstract', formData.abstract);
+    postData.append('category', formData.category);
+    postData.append('authorName', formData.authorName);
+    postData.append('authorEmail', formData.authorEmail);
+    postData.append('affiliation', formData.affiliation);
+    postData.append('coAuthors', formData.coAuthors);
+    postData.append('manuscriptFile', formData.manuscriptFile);
+    if (formData.coverLetterFile) {
+      postData.append('coverLetterFile', formData.coverLetterFile);
+    }
+
+    fetch('/api/submissions', {
+      method: 'POST',
+      body: postData
+    })
+      .then(res => {
+        if (!res.ok) {
+          return res.json().then(errData => {
+            throw new Error(errData.error || 'Failed to submit manuscript');
+          });
+        }
+        return res.json();
+      })
+      .then(data => {
+        setIsSubmitting(false);
+        setStep(4);
+        triggerSuccessConfetti();
+      })
+      .catch(err => {
+        console.error(err);
+        setErrors(prev => ({ ...prev, submit: err.message || 'Submission failed. Please try again.' }));
+        setIsSubmitting(false);
+      });
   };
 
   const triggerSuccessConfetti = () => {
@@ -406,6 +434,24 @@ export default function SubmitManuscript() {
               </label>
               {errors.declarations && <div style={{ color: '#dc2626', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}><AlertCircle size={14} />{errors.declarations}</div>}
             </div>
+
+            {errors.submit && (
+              <div style={{
+                backgroundColor: '#fee2e2',
+                border: '1px solid #fca5a5',
+                color: '#991b1b',
+                padding: '12px 16px',
+                borderRadius: 'var(--radius-md)',
+                marginTop: '16px',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <AlertCircle size={16} />
+                <span>{errors.submit}</span>
+              </div>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px' }}>
               <button type="button" onClick={prevStep} className="submit-btn">Back</button>
