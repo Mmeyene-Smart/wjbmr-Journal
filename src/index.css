@@ -394,7 +394,7 @@ a:hover {
 .about-circle-frame {
   width: 320px;
   height: 320px;
-  border-radius: 50%;
+  border-radius: var(--radius-md);
   border: 8px solid var(--primary-light);
   overflow: hidden;
   box-shadow: var(--shadow-lg);

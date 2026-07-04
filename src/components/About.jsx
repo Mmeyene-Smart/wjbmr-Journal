@@ -13,13 +13,12 @@ export default function About() {
           </h1>
           <div className="about-journal-divider"></div>
           
-          <div className="about-circle-frame">
+          <div className="about-circle-frame" style={{ borderRadius: 'var(--radius-md)' }}>
             <img 
-              src="/biomedical_illustration.png" 
-              alt="World Journal of Biomedical Research Illustration" 
+              src="/wjbmr-about.jpg" 
+              alt="World Journal of Biomedical Research Cover" 
               className="about-circle-img"
               onError={(e) => {
-                // Fallback icon representation if image fails to load
                 e.target.style.display = 'none';
               }}
             />
@@ -27,15 +26,11 @@ export default function About() {
           
           {/* Logo Icons at the bottom (Reference 2 logos) */}
           <div className="about-logos">
-            {/* University of Uyo Mock Logo */}
+            {/* University of Uyo Logo */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-              <svg viewBox="0 0 100 100" width="60" height="60" style={{ fill: 'var(--primary-color)' }}>
-                <circle cx="50" cy="50" r="45" fill="none" stroke="var(--primary-color)" strokeWidth="3" />
-                <path d="M50,15 L75,35 L75,65 L50,85 L25,65 L25,35 Z" fill="none" stroke="var(--primary-color)" strokeWidth="2" />
-                <path d="M50,22 L68,37 L68,63 L50,78 L32,63 L32,37 Z" fill="var(--primary-light)" />
-                <path d="M43,40 L50,30 L57,40 L57,60 L43,60 Z" fill="var(--primary-color)" />
-                <text x="50" y="70" fontSize="8" textAnchor="middle" fill="var(--primary-dark)" fontWeight="bold">UNIUYO</text>
-              </svg>
+              <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', background: '#fff', border: '2px solid var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img src="/college_logo.jpg" alt="University of Uyo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
               <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-muted)' }}>University of Uyo</span>
             </div>
             

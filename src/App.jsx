@@ -166,16 +166,8 @@ export default function App() {
       <header className="header-banner">
         <div className="container">
           <div className="banner-content">
-            {/* Logo box */}
-            <div className="banner-logo">
-              <svg viewBox="0 0 100 100" width="48" height="48" style={{ fill: 'currentColor' }}>
-                <rect x="15" y="15" width="20" height="20" rx="4" />
-                <rect x="40" y="15" width="20" height="20" rx="4" />
-                <rect x="65" y="15" width="20" height="20" rx="4" />
-                <rect x="15" y="40" width="20" height="20" rx="4" />
-                <rect x="40" y="40" width="20" height="20" rx="4" />
-                <rect x="15" y="65" width="20" height="20" rx="4" />
-              </svg>
+            <div className="banner-logo" style={{ overflow: 'hidden', background: '#fff', borderRadius: '50%', width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <img src="/college_logo.jpg" alt="College Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
             
             {/* Title Text */}
