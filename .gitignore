@@ -32,4 +32,3 @@ data/*.db
 data/*.db-shm
 data/*.db-wal
 data/uploads/
-wjbmr-deploy.zip
