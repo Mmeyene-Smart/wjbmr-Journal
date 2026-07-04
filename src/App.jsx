@@ -7,6 +7,7 @@ import Guidelines from './components/Guidelines';
 import AdminPanel from './components/AdminPanel';
 import ArticleDetail from './components/ArticleDetail';
 import { ArrowRight, Menu, X, BookOpen, GraduationCap, Mail, ShieldAlert, Key } from 'lucide-react';
+import API_BASE from './api.js';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('Home');
@@ -17,7 +18,7 @@ export default function App() {
 
   // Fetch articles from backend API on mount
   useEffect(() => {
-    fetch('/api/articles')
+    fetch(`${API_BASE}/api/articles`)
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch articles');
         return res.json();
@@ -69,7 +70,7 @@ export default function App() {
     }
     setIsLoggingIn(true);
     setAdminError('');
-    fetch('/api/auth/verify', {
+    fetch(`${API_BASE}/api/auth/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: adminPassword })

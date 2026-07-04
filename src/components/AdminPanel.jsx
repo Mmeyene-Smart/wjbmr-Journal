@@ -4,6 +4,7 @@ import {
   RefreshCw, FileText, Trash2, Copy, Image, Check, Code2,
   PenSquare, Library, Plus, ExternalLink, ClipboardCopy
 } from 'lucide-react';
+import API_BASE from '../api.js';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    TAB BUTTON helper
@@ -140,7 +141,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
   /* ── Submissions ── */
   const fetchSubmissions = () => {
     setLoadingSubmissions(true);
-    fetch('/api/submissions')
+    fetch(`${API_BASE}/api/submissions`)
       .then(res => { if (!res.ok) throw new Error(); return res.json(); })
       .then(data => setSubmissions(data))
       .catch(() => {})
@@ -157,7 +158,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
   /* ── Images ── */
   const fetchImages = useCallback(() => {
     setLoadingImages(true);
-    fetch('/api/images')
+    fetch(`${API_BASE}/api/images`)
       .then(res => { if (!res.ok) throw new Error(); return res.json(); })
       .then(data => setImages(data))
       .catch(() => {})
@@ -178,7 +179,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
     setImageError(null);
     const fd = new FormData();
     fd.append('imageFile', file);
-    fetch('/api/images', { method: 'POST', body: fd })
+    fetch(`${API_BASE}/api/images`, { method: 'POST', body: fd })
       .then(res => res.ok ? res.json() : res.json().then(d => Promise.reject(d.error)))
       .then(img => setImages(prev => [img, ...prev]))
       .catch(err => setImageError(err || 'Upload failed'))
@@ -263,7 +264,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
     postData.append('htmlFile', htmlFileToSend);
     postData.append('pdfFile', pdfFile);
 
-    fetch('/api/articles', { method: 'POST', body: postData })
+    fetch(`${API_BASE}/api/articles`, { method: 'POST', body: postData })
       .then(res => res.ok ? res.json() : res.json().then(d => Promise.reject(d.error || 'Failed to publish')))
       .then(newArticle => {
         onAddArticle(newArticle);

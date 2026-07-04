@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Upload, FileText, CheckCircle2, ChevronRight, AlertCircle, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import API_BASE from '../api.js';
 
 export default function SubmitManuscript() {
   const [step, setStep] = useState(1);
@@ -105,7 +106,7 @@ export default function SubmitManuscript() {
       postData.append('coverLetterFile', formData.coverLetterFile);
     }
 
-    fetch('/api/submissions', {
+    fetch(`${API_BASE}/api/submissions`, {
       method: 'POST',
       body: postData
     })
