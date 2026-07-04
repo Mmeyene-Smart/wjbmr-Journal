@@ -45,6 +45,7 @@ export default function App() {
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [adminError, setAdminError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => {
     return sessionStorage.getItem('wjbmr_admin_auth') === 'true';
   });
@@ -62,16 +63,32 @@ export default function App() {
 
   const handleAdminLoginSubmit = (e) => {
     e.preventDefault();
-    if (adminPassword === 'admin123') {
-      setIsAdminAuthenticated(true);
-      sessionStorage.setItem('wjbmr_admin_auth', 'true');
-      setShowAdminLogin(false);
-      setAdminPassword('');
-      setAdminError('');
-      handleNavigate('Admin');
-    } else {
-      setAdminError('Invalid administrator credentials');
+    if (!adminPassword.trim()) {
+      setAdminError('Please enter the administrator key');
+      return;
     }
+    setIsLoggingIn(true);
+    setAdminError('');
+    fetch('/api/auth/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: adminPassword })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setIsAdminAuthenticated(true);
+          sessionStorage.setItem('wjbmr_admin_auth', 'true');
+          setShowAdminLogin(false);
+          setAdminPassword('');
+          setAdminError('');
+          handleNavigate('Admin');
+        } else {
+          setAdminError('Invalid administrator credentials');
+        }
+      })
+      .catch(() => setAdminError('Network error — please try again'))
+      .finally(() => setIsLoggingIn(false));
   };
 
   const handleAddArticle = (newArticle) => {
@@ -421,24 +438,25 @@ export default function App() {
             
             <form onSubmit={handleAdminLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                Please enter the administrative key to access article publishing systems. (Use password: <strong>admin123</strong>)
+                Enter your administrator key to access the journal publishing dashboard.
               </p>
               
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Secret Key *</label>
+                <label className="form-label">Administrator Key *</label>
                 <input 
                   type="password" 
                   value={adminPassword} 
-                  onChange={(e) => setAdminPassword(e.target.value)} 
+                  onChange={(e) => { setAdminPassword(e.target.value); if (adminError) setAdminError(''); }} 
                   placeholder="••••••••"
                   className="form-input"
                   autoFocus
+                  disabled={isLoggingIn}
                 />
                 {adminError && <div style={{ color: '#dc2626', fontSize: '12px', marginTop: '6px' }}>{adminError}</div>}
               </div>
 
-              <button type="submit" className="submit-form-btn" style={{ marginTop: '8px' }}>
-                Verify & Enter Dashboard
+              <button type="submit" className="submit-form-btn" style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} disabled={isLoggingIn}>
+                {isLoggingIn ? 'Verifying...' : 'Verify & Enter Dashboard'}
               </button>
             </form>
           </div>

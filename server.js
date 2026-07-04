@@ -12,6 +12,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Admin password — set ADMIN_PASSWORD env var in cPanel / .env file to override
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ChangeMe!2026@WJBMR';
+
 // Enable CORS and JSON parsing
 app.use(cors());
 app.use(express.json());
@@ -56,6 +59,17 @@ const upload = multer({
 });
 
 // --- API ROUTES ---
+
+// 0. Admin auth — verifies password server-side (never exposes password to client)
+app.post('/api/auth/verify', (req, res) => {
+  const { password } = req.body;
+  if (!password) return res.status(400).json({ success: false, error: 'Password required' });
+  if (password === ADMIN_PASSWORD) {
+    return res.json({ success: true });
+  }
+  // Small delay to slow brute-force attempts
+  setTimeout(() => res.status(401).json({ success: false }), 500);
+});
 
 // 1. Get all articles
 app.get('/api/articles', (req, res) => {
