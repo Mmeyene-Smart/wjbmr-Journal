@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
@@ -375,17 +376,17 @@ app.delete('/api/images/:id', (req, res) => {
   }
 });
 
-// Serve frontend assets in production environment
-if (process.env.NODE_ENV === 'production') {
-  const distPath = path.join(__dirname, 'dist');
+// Serve frontend assets if built
+const distPath = path.join(__dirname, 'dist');
+if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
 
-  app.get('*', (req, res) => {
+  app.get('/*splat', (req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));
   });
 } else {
   app.get('/', (req, res) => {
-    res.send('API server is running. Access frontend on Vite dev port.');
+    res.send('API server is running. (Note: Frontend build directory "dist" not found. Run "npm run build" to serve frontend).');
   });
 }
 
