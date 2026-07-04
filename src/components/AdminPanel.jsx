@@ -150,7 +150,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
 
   const handleDeleteSubmission = (id) => {
     if (!window.confirm('Delete this submission?')) return;
-    fetch(`/api/submissions/${id}`, { method: 'DELETE' })
+    fetch(`${API_BASE}/api/submissions/${id}`, { method: 'DELETE' })
       .then(res => { if (!res.ok) throw new Error(); setSubmissions(prev => prev.filter(s => s.id !== id)); })
       .catch(() => alert('Failed to delete submission'));
   };
@@ -191,7 +191,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
 
   const handleDeleteImage = (id) => {
     if (!window.confirm('Permanently delete this image from the server?')) return;
-    fetch(`/api/images/${id}`, { method: 'DELETE' })
+    fetch(`${API_BASE}/api/images/${id}`, { method: 'DELETE' })
       .then(res => { if (!res.ok) throw new Error(); setImages(prev => prev.filter(i => i.id !== id)); })
       .catch(() => alert('Failed to delete image'));
   };
@@ -207,7 +207,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
 
   /* ── Insert image directly into HTML editor ── */
   const insertImageIntoEditor = (url) => {
-    const snippet = `<img src="${url}" alt="figure" style="max-width:100%; height:auto; display:block; margin:16px auto;" />`;
+    const snippet = `<img src="${API_BASE}${url}" alt="figure" style="max-width:100%; height:auto; display:block; margin:16px auto;" />`;
     if (activeTab === 'publish' && htmlContent) {
       insertAtCursor(snippet);
     } else {
@@ -686,7 +686,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
                 <li>The image will appear in the article when viewed on the site.</li>
               </ol>
               <div style={{ marginTop: '14px', padding: '10px 14px', background: 'var(--bg-light)', borderRadius: 'var(--radius-sm)', fontFamily: 'monospace', fontSize: '11px', color: 'var(--primary-dark)', wordBreak: 'break-all' }}>
-                &lt;img src="/uploads/photo.jpg" alt="figure" style="max-width:100%;" /&gt;
+                &lt;img src="${API_BASE}/uploads/photo.jpg" alt="figure" style="max-width:100%;" /&gt;
               </div>
             </div>
           </div>
@@ -735,7 +735,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
                     {/* Thumbnail */}
                     <div style={{ height: '140px', overflow: 'hidden', background: '#f1f5f9', position: 'relative' }}>
                       <img
-                        src={img.url}
+                        src={`${API_BASE}${img.url}`}
                         alt={img.filename}
                         style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                         onError={(e) => { e.target.style.display = 'none'; }}
@@ -765,7 +765,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {/* Copy IMG tag */}
                         <button
-                          onClick={() => copyToClipboard(`<img src="${img.url}" alt="figure" style="max-width:100%; height:auto; display:block; margin:16px auto;" />`, `tag-${img.id}`)}
+                          onClick={() => copyToClipboard(`<img src="${API_BASE}${img.url}" alt="figure" style="max-width:100%; height:auto; display:block; margin:16px auto;" />`, `tag-${img.id}`)}
                           style={{
                             width: '100%', padding: '6px 8px', border: '1px solid var(--primary-color)',
                             borderRadius: '5px', background: copyFeedback[`tag-${img.id}`] ? '#dcfce7' : 'var(--primary-light)',
@@ -780,7 +780,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
 
                         {/* Copy URL */}
                         <button
-                          onClick={() => copyToClipboard(img.url, `url-${img.id}`)}
+                          onClick={() => copyToClipboard(`${API_BASE}${img.url}`, `url-${img.id}`)}
                           style={{
                             width: '100%', padding: '6px 8px', border: '1px solid var(--border-color)',
                             borderRadius: '5px', background: copyFeedback[`url-${img.id}`] ? '#dcfce7' : 'transparent',
@@ -795,7 +795,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
 
                         {/* Open in new tab */}
                         <a
-                          href={img.url} target="_blank" rel="noopener noreferrer"
+                          href={`${API_BASE}${img.url}`} target="_blank" rel="noopener noreferrer"
                           style={{
                             width: '100%', padding: '6px 8px', border: '1px solid var(--border-color)',
                             borderRadius: '5px', background: 'transparent', color: 'var(--text-muted)',

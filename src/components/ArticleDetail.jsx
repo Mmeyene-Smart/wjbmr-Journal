@@ -1,5 +1,6 @@
 import React from 'react';
 import { User, Calendar, BookOpen, Download, Share2, Printer, ChevronRight, FileCheck } from 'lucide-react';
+import API_BASE from '../api.js';
 
 export default function ArticleDetail({ article, articles = [], onNavigateToArticle, onBackToHome }) {
   if (!article) {
@@ -73,7 +74,7 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
                 <BookOpen size={15} /> {article.volume || 'Volume 12'} No {article.issue ? article.issue.split(' ')[1] : '2'}
               </span>
               <a 
-                href={article.pdfUrl || '#'} 
+                href={article.pdfUrl && article.pdfUrl.startsWith('/uploads/') ? `${API_BASE}${article.pdfUrl}` : (article.pdfUrl || '#')} 
                 onClick={handleDownload}
                 target={article.pdfUrl && article.pdfUrl !== '#' ? '_blank' : undefined}
                 rel="noopener noreferrer"
@@ -140,7 +141,7 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
               </div>
               
               <a 
-                href={article.pdfUrl || '#'} 
+                href={article.pdfUrl && article.pdfUrl.startsWith('/uploads/') ? `${API_BASE}${article.pdfUrl}` : (article.pdfUrl || '#')} 
                 onClick={handleDownload}
                 target={article.pdfUrl && article.pdfUrl !== '#' ? '_blank' : undefined}
                 rel="noopener noreferrer"
@@ -199,7 +200,7 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
               marginTop: '40px'
             }}>
               <a 
-                href={article.pdfUrl || '#'} 
+                href={article.pdfUrl && article.pdfUrl.startsWith('/uploads/') ? `${API_BASE}${article.pdfUrl}` : (article.pdfUrl || '#')} 
                 onClick={handleDownload}
                 target={article.pdfUrl && article.pdfUrl !== '#' ? '_blank' : undefined}
                 rel="noopener noreferrer"
