@@ -93,7 +93,11 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
             {/* 3. Author details and affiliations */}
             <div style={{ marginBottom: '24px', fontSize: '14px', lineHeight: '1.6' }}>
               <div style={{ marginBottom: '8px' }}>
-                <strong>Authors:</strong> {getAuthorsDisplay()}
+                <strong>Authors:</strong>{' '}
+                {typeof article.authors === 'string'
+                  ? <span dangerouslySetInnerHTML={{ __html: article.authors }} />
+                  : article.authors.map(a => a.name).join(', ')
+                }
               </div>
               
               {article.affiliations && (

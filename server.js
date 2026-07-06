@@ -117,11 +117,8 @@ app.post('/api/articles', upload.fields([
     // Read the HTML file text content to save as the article's body (fullText)
     const htmlContent = fs.readFileSync(htmlFile.path, 'utf8');
 
-    // Parse authors (comma-separated string from form to array of {name, profile})
-    const parsedAuthors = authors.split(',').map(name => ({
-      name: name.trim(),
-      profile: '#'
-    }));
+    // Store authors as raw HTML string (supports <sup>/<sub> tags for academic notation)
+    const parsedAuthors = authors;
 
     // Choose random charts just like the simulated React code
     const chartTypes = ['line', 'bar', 'pie'];

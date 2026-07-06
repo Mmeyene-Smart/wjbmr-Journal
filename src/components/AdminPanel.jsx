@@ -381,8 +381,48 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
 
               {/* Authors */}
               <div className="form-group">
-                <label className="form-label">Authors * (comma separated)</label>
-                <input type="text" name="authors" value={formData.authors} onChange={handleInputChange} placeholder="e.g. Akpan, OD., Bassey, EA." className="form-input" disabled={isSubmitting} />
+                <label className="form-label">Authors * — HTML supported (e.g. <code style={{fontSize:'11px'}}>Name<sup>1</sup></code>)</label>
+                {/* Quick-insert toolbar */}
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                  {['<sup>1</sup>','<sup>2</sup>','<sup>3</sup>','<sup>4</sup>','<sup>5</sup>','<sup>6</sup>','<sup>*</sup>'].map(tag => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, authors: prev.authors + tag }))}
+                      style={{
+                        padding: '3px 8px',
+                        fontSize: '11px',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '4px',
+                        background: 'var(--bg-light)',
+                        cursor: 'pointer',
+                        fontFamily: 'monospace',
+                        color: 'var(--primary-dark)'
+                      }}
+                      title={`Insert ${tag}`}
+                    >
+                      {tag.replace(/<[^>]+>/g, match => match === '<sup>' ? '⁽' : '⁾').replace('⁽⁾', tag.replace(/<\/?sup>/g,''))}
+                      <span style={{fontSize:'9px', verticalAlign:'super'}}>{tag.replace(/<[^>]+>/g,'')}</span>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, authors: prev.authors + ', ' }))}
+                    style={{ padding: '3px 8px', fontSize: '11px', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--bg-light)', cursor: 'pointer', color: 'var(--text-muted)' }}
+                  >
+                    , (comma)
+                  </button>
+                </div>
+                <textarea
+                  name="authors"
+                  rows="3"
+                  value={formData.authors}
+                  onChange={handleInputChange}
+                  placeholder="e.g. Akpan OD<sup>1</sup>, Bassey EA<sup>1,2</sup>, Okon EU<sup>2</sup>"
+                  className="form-textarea"
+                  disabled={isSubmitting}
+                  style={{ fontFamily: 'monospace', fontSize: '13px' }}
+                />
                 {errors.authors && <div style={{ color: '#dc2626', fontSize: '12px' }}>{errors.authors}</div>}
               </div>
 

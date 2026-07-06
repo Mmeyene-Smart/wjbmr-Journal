@@ -322,7 +322,10 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                       </h4>
                       
                       <div style={{ fontSize: '13px', color: 'var(--text-dark)', fontWeight: '500' }}>
-                        {typeof art.authors === 'string' ? art.authors : art.authors.map(a => a.name).join(', ')}
+                        {typeof art.authors === 'string'
+                          ? <span dangerouslySetInnerHTML={{ __html: art.authors }} />
+                          : art.authors.map(a => a.name).join(', ')
+                        }
                       </div>
 
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>

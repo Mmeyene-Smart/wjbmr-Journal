@@ -53,8 +53,11 @@ export default function Home({ onNavigate, onNavigateToArticle, articles = [] })
   const [selectedCategory, setSelectedCategory] = useState('All');
 
   const filteredPublications = articles.filter(pub => {
+    const authorsText = typeof pub.authors === 'string'
+      ? pub.authors.replace(/<[^>]+>/g, '') // strip HTML tags for search
+      : pub.authors.map(a => a.name).join(' ');
     const matchesSearch = pub.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      pub.authors.some(auth => auth.name.toLowerCase().includes(searchTerm.toLowerCase()));
+      authorsText.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesCategory = selectedCategory === 'All' || pub.category === selectedCategory;
     
@@ -305,12 +308,15 @@ export default function Home({ onNavigate, onNavigateToArticle, articles = [] })
                       <div className="pub-category">{pub.category}</div>
                       <div className="pub-title" onClick={() => onNavigateToArticle(pub.id)}>{pub.title}</div>
                       <div className="pub-authors">
-                        {pub.authors.map((auth, index) => (
-                          <React.Fragment key={index}>
-                            <span onClick={() => {}}>{auth.name}</span>
-                            {index < pub.authors.length - 1 ? ' & ' : ''}
-                          </React.Fragment>
-                        ))}
+                        {typeof pub.authors === 'string'
+                          ? <span dangerouslySetInnerHTML={{ __html: pub.authors }} />
+                          : pub.authors.map((auth, index) => (
+                            <React.Fragment key={index}>
+                              <span>{auth.name}</span>
+                              {index < pub.authors.length - 1 ? ' & ' : ''}
+                            </React.Fragment>
+                          ))
+                        }
                       </div>
                       <div className="pub-meta">
                         <span className="pub-meta-item">
