@@ -173,13 +173,13 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
                 borderBottom: '2px solid var(--border-color)',
                 paddingBottom: '6px'
               }}>
-                Abstract
+                {article.fullText ? 'Full Manuscript Text' : 'Abstract'}
               </h3>
 
               {article.isHtmlArticle ? (
                 /* Dynamic HTML Rendering */
                 <div 
-                  dangerouslySetInnerHTML={{ __html: article.abstract }} 
+                  dangerouslySetInnerHTML={{ __html: article.fullText || article.abstract }} 
                   className="html-article-renderer" 
                   style={{ marginBottom: '32px' }}
                 />

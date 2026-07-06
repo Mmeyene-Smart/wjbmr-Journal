@@ -53,7 +53,8 @@ try {
       pages TEXT,
       volume TEXT,
       issue TEXT,
-      abstract TEXT NOT NULL,         -- Stores the full HTML article body
+      abstract TEXT NOT NULL,         -- Stores the plain text abstract
+      fullText TEXT,                  -- Stores the full HTML article body
       isHtmlArticle INTEGER DEFAULT 1,
       affiliations TEXT,
       correspondingAuthor TEXT,
@@ -82,6 +83,13 @@ try {
     );
   `);
 
+  // Run dynamic schema migration to add fullText if it doesn't exist
+  try {
+    db.exec("ALTER TABLE articles ADD COLUMN fullText TEXT");
+  } catch (e) {
+    // Ignored if column already exists
+  }
+
   // Pre-seed articles if table is empty
   const checkArticles = db.prepare('SELECT COUNT(*) as count FROM articles');
   const articleCount = checkArticles.get().count;
@@ -90,8 +98,8 @@ try {
     console.log('Seeding SQLite database with default mock publications...');
     
     const insertStmt = db.prepare(`
-      INSERT INTO articles (id, category, title, authors, date, readTime, pdfUrl, chartType, chartData, doi, pages, volume, issue, abstract, isHtmlArticle, affiliations, correspondingAuthor, keywords)
-      VALUES (@id, @category, @title, @authors, @date, @readTime, @pdfUrl, @chartType, @chartData, @doi, @pages, @volume, @issue, @abstract, @isHtmlArticle, @affiliations, @correspondingAuthor, @keywords)
+      INSERT INTO articles (id, category, title, authors, date, readTime, pdfUrl, chartType, chartData, doi, pages, volume, issue, abstract, fullText, isHtmlArticle, affiliations, correspondingAuthor, keywords)
+      VALUES (@id, @category, @title, @authors, @date, @readTime, @pdfUrl, @chartType, @chartData, @doi, @pages, @volume, @issue, @abstract, @fullText, @isHtmlArticle, @affiliations, @correspondingAuthor, @keywords)
     `);
 
     const transaction = db.transaction((rows) => {
@@ -177,8 +185,8 @@ export function addArticle(article) {
   }
 
   const stmt = db.prepare(`
-    INSERT INTO articles (id, category, title, authors, date, readTime, pdfUrl, chartType, chartData, doi, pages, volume, issue, abstract, isHtmlArticle, affiliations, correspondingAuthor, keywords)
-    VALUES (@id, @category, @title, @authors, @date, @readTime, @pdfUrl, @chartType, @chartData, @doi, @pages, @volume, @issue, @abstract, @isHtmlArticle, @affiliations, @correspondingAuthor, @keywords)
+    INSERT INTO articles (id, category, title, authors, date, readTime, pdfUrl, chartType, chartData, doi, pages, volume, issue, abstract, fullText, isHtmlArticle, affiliations, correspondingAuthor, keywords)
+    VALUES (@id, @category, @title, @authors, @date, @readTime, @pdfUrl, @chartType, @chartData, @doi, @pages, @volume, @issue, @abstract, @fullText, @isHtmlArticle, @affiliations, @correspondingAuthor, @keywords)
   `);
   stmt.run({
     ...article,

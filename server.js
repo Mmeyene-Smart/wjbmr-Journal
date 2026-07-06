@@ -99,7 +99,8 @@ app.post('/api/articles', upload.fields([
       volume,
       issue,
       pages,
-      doi
+      doi,
+      abstract
     } = req.body;
 
     // Validate files
@@ -113,7 +114,7 @@ app.post('/api/articles', upload.fields([
     const htmlFile = req.files.htmlFile[0];
     const pdfFile = req.files.pdfFile[0];
 
-    // Read the HTML file text content to save as the article's body (abstract)
+    // Read the HTML file text content to save as the article's body (fullText)
     const htmlContent = fs.readFileSync(htmlFile.path, 'utf8');
 
     // Parse authors (comma-separated string from form to array of {name, profile})
@@ -162,7 +163,8 @@ app.post('/api/articles', upload.fields([
       pages: pages || '',
       volume: volume || 'Volume 12 (2026)',
       issue: issue || 'Issue 2 (June 2026)',
-      abstract: htmlContent, // Save HTML content directly
+      abstract: abstract || '', // Save plain text abstract
+      fullText: htmlContent, // Save HTML content in fullText
       isHtmlArticle: true,
       affiliations: affiliations || '',
       correspondingAuthor: correspondingAuthor || '',

@@ -96,6 +96,19 @@ export default function App() {
     setArticles(prev => [newArticle, ...prev]);
   };
 
+  const handleDeleteArticle = async (articleId) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/articles/${articleId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setArticles(prev => prev.filter(a => a.id !== articleId));
+      } else {
+        alert('Failed to delete article. Please try again.');
+      }
+    } catch (err) {
+      alert('Network error — could not delete article.');
+    }
+  };
+
   const handleLogoutAdmin = () => {
     setIsAdminAuthenticated(false);
     sessionStorage.removeItem('wjbmr_admin_auth');
@@ -129,7 +142,9 @@ export default function App() {
       case 'Admin':
         return isAdminAuthenticated ? (
           <AdminPanel 
-            onAddArticle={handleAddArticle} 
+            onAddArticle={handleAddArticle}
+            onDeleteArticle={handleDeleteArticle}
+            articles={articles}
             onBackToHome={() => handleNavigate('Home')} 
           />
         ) : (

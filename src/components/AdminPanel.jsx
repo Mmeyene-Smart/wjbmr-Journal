@@ -38,8 +38,9 @@ function TabBtn({ active, onClick, children }) {
 /* ─────────────────────────────────────────────────────────────────────────────
    MAIN COMPONENT
 ───────────────────────────────────────────────────────────────────────────── */
-export default function AdminPanel({ onAddArticle, onBackToHome }) {
+export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], onDeleteArticle }) {
   const [activeTab, setActiveTab] = useState('publish');
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   /* ── Publish form state ── */
   const [formData, setFormData] = useState({
@@ -53,6 +54,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
     issue: 'Issue 2 (June 2026)',
     pages: '',
     doi: '',
+    abstract: '',
     date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
   });
 
@@ -233,6 +235,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
     if (!formData.affiliations.trim()) newErrors.affiliations = 'Institutional affiliations are required';
     if (!formData.correspondingAuthor.trim()) newErrors.correspondingAuthor = 'Corresponding author details are required';
     if (!formData.keywords.trim()) newErrors.keywords = 'Keywords are required';
+    if (!formData.abstract.trim()) newErrors.abstract = 'Article abstract text is required';
     if (!formData.pages.trim()) newErrors.pages = 'Page range is required (e.g. 139 - 148)';
     if (!formData.doi.trim()) newErrors.doi = 'DOI is required';
     if (!htmlContent.trim()) newErrors.htmlFile = 'HTML content is required';
@@ -261,6 +264,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
     postData.append('issue', formData.issue);
     postData.append('pages', formData.pages);
     postData.append('doi', formData.doi);
+    postData.append('abstract', formData.abstract);
     postData.append('htmlFile', htmlFileToSend);
     postData.append('pdfFile', pdfFile);
 
@@ -272,7 +276,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
         setFormData({
           title: '', authors: '', affiliations: '', correspondingAuthor: '',
           keywords: '', category: 'ORIGINAL RESEARCH', volume: 'Volume 12 (2026)',
-          issue: 'Issue 2 (June 2026)', pages: '', doi: '',
+          issue: 'Issue 2 (June 2026)', pages: '', doi: '', abstract: '',
           date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
         });
         setHtmlFile(null); setHtmlContent(''); setHtmlFileName(''); setShowHtmlEditor(false);
@@ -312,6 +316,15 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
       <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--border-color)', marginBottom: '32px' }}>
         <TabBtn active={activeTab === 'publish'} onClick={() => setActiveTab('publish')}>
           <PenSquare size={15} /> Publish Article
+        </TabBtn>
+        <TabBtn active={activeTab === 'published'} onClick={() => setActiveTab('published')}>
+          <Library size={15} /> Published Articles
+          {articles.length > 0 && (
+            <span style={{
+              background: 'var(--primary-color)', color: '#fff', borderRadius: '20px',
+              fontSize: '11px', padding: '1px 7px', fontWeight: '700'
+            }}>{articles.length}</span>
+          )}
         </TabBtn>
         <TabBtn active={activeTab === 'images'} onClick={() => setActiveTab('images')}>
           <Image size={15} /> Image Library
@@ -392,6 +405,21 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
                 <label className="form-label">Keywords * (comma separated)</label>
                 <input type="text" name="keywords" value={formData.keywords} onChange={handleInputChange} placeholder="e.g. record keeping, grains, marketers..." className="form-input" disabled={isSubmitting} />
                 {errors.keywords && <div style={{ color: '#dc2626', fontSize: '12px' }}>{errors.keywords}</div>}
+              </div>
+
+              {/* Abstract */}
+              <div className="form-group">
+                <label className="form-label">Abstract *</label>
+                <textarea
+                  name="abstract"
+                  rows="6"
+                  value={formData.abstract}
+                  onChange={handleInputChange}
+                  placeholder="Enter the article abstract here. Include background, methods, results, and conclusion..."
+                  className="form-textarea"
+                  disabled={isSubmitting}
+                />
+                {errors.abstract && <div style={{ color: '#dc2626', fontSize: '12px' }}>{errors.abstract}</div>}
               </div>
 
               {/* Category + Volume */}
@@ -815,6 +843,136 @@ export default function AdminPanel({ onAddArticle, onBackToHome }) {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════
+          TAB: PUBLISHED ARTICLES
+      ═══════════════════════════════════════════════════════════════ */}
+      {activeTab === 'published' && (
+        <div className="glass-card" style={{ width: '100%', overflowX: 'auto', padding: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h3 style={{ fontSize: '20px', color: 'var(--primary-dark)', marginBottom: '4px' }}>Published Articles</h3>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
+                {articles.length} article{articles.length !== 1 ? 's' : ''} currently live on the site
+              </p>
+            </div>
+          </div>
+
+          {articles.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 40px', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)', background: 'var(--bg-light)' }}>
+              <FileText size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
+              <strong style={{ display: 'block', marginBottom: '6px', color: 'var(--text-dark)' }}>No articles published yet</strong>
+              Use the Publish Article tab to add your first article.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {articles.map(art => (
+                <div
+                  key={art.id}
+                  style={{
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '16px 20px',
+                    background: deleteConfirmId === art.id ? '#fff5f5' : 'var(--bg-white)',
+                    borderColor: deleteConfirmId === art.id ? '#fca5a5' : 'var(--border-color)',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '20px',
+                    flexWrap: 'wrap'
+                  }}
+                >
+                  {/* Article info */}
+                  <div style={{ flex: '1', minWidth: '220px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                      {art.category} &bull; {art.volume} &bull; {art.pages && `Pages ${art.pages}`}
+                    </div>
+                    <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--primary-dark)', lineHeight: '1.4', marginBottom: '4px' }}>
+                      {art.title}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      {typeof art.authors === 'string' ? art.authors : art.authors.map(a => a.name).join(', ')}
+                    </div>
+                    {art.doi && (
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '2px' }}>{art.doi}</div>
+                    )}
+                  </div>
+
+                  {/* Delete / Confirm section */}
+                  <div style={{ flexShrink: 0 }}>
+                    {deleteConfirmId === art.id ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '12px', color: '#dc2626', fontWeight: '700' }}>Delete permanently?</span>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            onClick={async () => {
+                              await onDeleteArticle(art.id);
+                              setDeleteConfirmId(null);
+                            }}
+                            style={{
+                              padding: '6px 14px',
+                              background: '#dc2626',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontWeight: '700',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '5px'
+                            }}
+                          >
+                            <Trash2 size={13} /> Yes, Delete
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirmId(null)}
+                            style={{
+                              padding: '6px 14px',
+                              background: 'var(--bg-light)',
+                              color: 'var(--text-dark)',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: '6px',
+                              fontWeight: '600',
+                              fontSize: '12px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setDeleteConfirmId(art.id)}
+                        style={{
+                          padding: '7px 16px',
+                          background: 'none',
+                          color: '#dc2626',
+                          border: '1px solid #fca5a5',
+                          borderRadius: '6px',
+                          fontWeight: '700',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+                      >
+                        <Trash2 size={13} /> Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
