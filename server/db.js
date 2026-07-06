@@ -1,6 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import mongoose from 'mongoose';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,13 +11,9 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-const dbPath = path.join(dataDir, 'journal.db');
 const jsonDbPath = path.join(dataDir, 'journal-db.json');
 
-const seedArticlesRaw = [];
-
-
-let db = null;
+// ─── JSON fallback (used when MONGODB_URI is not set) ────────────────────────
 let useJsonDb = false;
 let jsonData = { articles: [], submissions: [], images: [] };
 
@@ -28,280 +25,232 @@ function saveJsonDb() {
   }
 }
 
-// Dynamically import better-sqlite3 to catch errors if compiling/running native code is unsupported on the host
-try {
-  const sqliteModule = await import('better-sqlite3');
-  const Database = sqliteModule.default;
-  db = new Database(dbPath);
+// ─── Mongoose Schemas ────────────────────────────────────────────────────────
+const articleSchema = new mongoose.Schema({
+  id:                 { type: Number, required: true, unique: true },
+  category:           { type: String, required: true },
+  title:              { type: String, required: true },
+  authors:            { type: mongoose.Schema.Types.Mixed, required: true }, // string or array
+  date:               { type: String, required: true },
+  readTime:           { type: String, required: true },
+  pdfUrl:             { type: String, required: true },
+  chartType:          { type: String, required: true },
+  chartData:          { type: [Number], required: true },
+  doi:                { type: String, default: '' },
+  pages:              { type: String, default: '' },
+  volume:             { type: String, default: '' },
+  issue:              { type: String, default: '' },
+  abstract:           { type: String, default: '' },
+  fullText:           { type: String, default: '' },
+  isHtmlArticle:      { type: Boolean, default: true },
+  affiliations:       { type: String, default: '' },
+  correspondingAuthor:{ type: String, default: '' },
+  keywords:           { type: String, default: '' },
+}, { _id: false }); // use numeric `id` as the key, not MongoDB ObjectId
 
-  // Enable WAL mode for better concurrency performance
-  db.pragma('journal_mode = WAL');
+const submissionSchema = new mongoose.Schema({
+  title:          { type: String, required: true },
+  abstract:       { type: String, required: true },
+  category:       { type: String, required: true },
+  authorName:     { type: String, required: true },
+  authorEmail:    { type: String, required: true },
+  affiliation:    { type: String, required: true },
+  coAuthors:      { type: String, default: '' },
+  manuscriptFile: { type: String, required: true },
+  coverLetterFile:{ type: String, default: null },
+  submittedAt:    { type: String, required: true },
+});
 
-  // Create tables if they do not exist
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS articles (
-      id INTEGER PRIMARY KEY,
-      category TEXT NOT NULL,
-      title TEXT NOT NULL,
-      authors TEXT NOT NULL,          -- JSON string of {name: string, profile: string}[]
-      date TEXT NOT NULL,
-      readTime TEXT NOT NULL,
-      pdfUrl TEXT NOT NULL,
-      chartType TEXT NOT NULL,
-      chartData TEXT NOT NULL,        -- JSON string of number[]
-      doi TEXT,
-      pages TEXT,
-      volume TEXT,
-      issue TEXT,
-      abstract TEXT NOT NULL,         -- Stores the plain text abstract
-      fullText TEXT,                  -- Stores the full HTML article body
-      isHtmlArticle INTEGER DEFAULT 1,
-      affiliations TEXT,
-      correspondingAuthor TEXT,
-      keywords TEXT
-    );
+const imageSchema = new mongoose.Schema({
+  filename:   { type: String, required: true },
+  url:        { type: String, required: true },
+  uploadedAt: { type: String, required: true },
+});
 
-    CREATE TABLE IF NOT EXISTS submissions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
-      abstract TEXT NOT NULL,
-      category TEXT NOT NULL,
-      authorName TEXT NOT NULL,
-      authorEmail TEXT NOT NULL,
-      affiliation TEXT NOT NULL,
-      coAuthors TEXT,
-      manuscriptFile TEXT NOT NULL,  -- Filename/URL of manuscript doc
-      coverLetterFile TEXT,          -- Filename/URL of cover letter
-      submittedAt TEXT NOT NULL
-    );
+// ─── Connect to MongoDB ──────────────────────────────────────────────────────
+const MONGODB_URI = process.env.MONGODB_URI;
 
-    CREATE TABLE IF NOT EXISTS images (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      filename TEXT NOT NULL,
-      url TEXT NOT NULL,
-      uploadedAt TEXT NOT NULL
-    );
-  `);
+let Article, Submission, Image;
 
-  // Run dynamic schema migration to add fullText if it doesn't exist
+if (MONGODB_URI) {
   try {
-    db.exec("ALTER TABLE articles ADD COLUMN fullText TEXT");
-  } catch (e) {
-    // Ignored if column already exists
+    await mongoose.connect(MONGODB_URI);
+    console.log('Connected to MongoDB Atlas.');
+
+    Article    = mongoose.model('Article',    articleSchema);
+    Submission = mongoose.model('Submission', submissionSchema);
+    Image      = mongoose.model('Image',      imageSchema);
+  } catch (err) {
+    console.error('Failed to connect to MongoDB — falling back to JSON db:', err.message);
+    useJsonDb = true;
   }
-
-  // Pre-seed articles if table is empty
-  const checkArticles = db.prepare('SELECT COUNT(*) as count FROM articles');
-  const articleCount = checkArticles.get().count;
-
-  if (articleCount === 0) {
-    console.log('Seeding SQLite database with default mock publications...');
-    
-    const insertStmt = db.prepare(`
-      INSERT INTO articles (id, category, title, authors, date, readTime, pdfUrl, chartType, chartData, doi, pages, volume, issue, abstract, fullText, isHtmlArticle, affiliations, correspondingAuthor, keywords)
-      VALUES (@id, @category, @title, @authors, @date, @readTime, @pdfUrl, @chartType, @chartData, @doi, @pages, @volume, @issue, @abstract, @fullText, @isHtmlArticle, @affiliations, @correspondingAuthor, @keywords)
-    `);
-
-    const transaction = db.transaction((rows) => {
-      for (const row of rows) {
-        insertStmt.run({
-          ...row,
-          authors: JSON.stringify(row.authors),
-          chartData: JSON.stringify(row.chartData),
-          isHtmlArticle: row.isHtmlArticle ? 1 : 0
-        });
-      }
-    });
-
-    transaction(seedArticlesRaw);
-    console.log('SQLite Seeding complete.');
-  }
-} catch (err) {
-  console.warn('WARNING: Failed to load better-sqlite3. Falling back to JSON database.', err.message);
+} else {
+  console.warn('MONGODB_URI not set. Using local JSON database (not suitable for production).');
   useJsonDb = true;
+}
 
+// Load JSON fallback from disk
+if (useJsonDb) {
   if (fs.existsSync(jsonDbPath)) {
     try {
       jsonData = JSON.parse(fs.readFileSync(jsonDbPath, 'utf8'));
     } catch (e) {
-      console.error('Error parsing journal-db.json, initializing empty db', e);
+      console.error('Error parsing journal-db.json, starting empty:', e);
       jsonData = { articles: [], submissions: [], images: [] };
     }
   } else {
-    console.log('Seeding JSON database with default mock publications...');
-    jsonData = {
-      articles: seedArticlesRaw,
-      submissions: [],
-      images: []
-    };
+    jsonData = { articles: [], submissions: [], images: [] };
     saveJsonDb();
-    console.log('JSON Seeding complete.');
   }
 }
 
-// DB Helper Functions
-export function getArticles() {
+// ─── Helper: strip MongoDB internals from returned objects ──────────────────
+function cleanArticle(doc) {
+  if (!doc) return null;
+  const obj = doc.toObject ? doc.toObject() : { ...doc };
+  delete obj.__v;
+  delete obj._id;
+  return obj;
+}
+
+function cleanDoc(doc) {
+  if (!doc) return null;
+  const obj = doc.toObject ? doc.toObject() : { ...doc };
+  const id = obj._id?.toString() || obj.id;
+  delete obj.__v;
+  delete obj._id;
+  return { id: parseInt(id), ...obj };
+}
+
+// ─── Exported async DB functions ─────────────────────────────────────────────
+
+export async function getArticles() {
   if (useJsonDb) {
     return [...jsonData.articles].sort((a, b) => b.id - a.id);
   }
-
-  const stmt = db.prepare('SELECT * FROM articles ORDER BY id DESC');
-  const rows = stmt.all();
-  return rows.map(row => ({
-    ...row,
-    authors: JSON.parse(row.authors),
-    chartData: JSON.parse(row.chartData),
-    isHtmlArticle: !!row.isHtmlArticle
-  }));
+  const docs = await Article.find().sort({ id: -1 }).lean();
+  return docs.map(d => { delete d.__v; delete d._id; return d; });
 }
 
-export function getArticleById(id) {
+export async function getArticleById(id) {
   if (useJsonDb) {
     const article = jsonData.articles.find(art => art.id === parseInt(id));
     return article ? { ...article } : null;
   }
-
-  const stmt = db.prepare('SELECT * FROM articles WHERE id = ?');
-  const row = stmt.get(id);
-  if (!row) return null;
-  return {
-    ...row,
-    authors: JSON.parse(row.authors),
-    chartData: JSON.parse(row.chartData),
-    isHtmlArticle: !!row.isHtmlArticle
-  };
+  const doc = await Article.findOne({ id: parseInt(id) }).lean();
+  if (!doc) return null;
+  delete doc.__v;
+  delete doc._id;
+  return doc;
 }
 
-export function addArticle(article) {
+export async function addArticle(article) {
   if (useJsonDb) {
-    const newArt = {
-      ...article,
-      id: article.id || Date.now(),
-      isHtmlArticle: !!article.isHtmlArticle
-    };
+    const newArt = { ...article, id: article.id || Date.now(), isHtmlArticle: !!article.isHtmlArticle };
     jsonData.articles.push(newArt);
     saveJsonDb();
     return newArt;
   }
-
-  const stmt = db.prepare(`
-    INSERT INTO articles (id, category, title, authors, date, readTime, pdfUrl, chartType, chartData, doi, pages, volume, issue, abstract, fullText, isHtmlArticle, affiliations, correspondingAuthor, keywords)
-    VALUES (@id, @category, @title, @authors, @date, @readTime, @pdfUrl, @chartType, @chartData, @doi, @pages, @volume, @issue, @abstract, @fullText, @isHtmlArticle, @affiliations, @correspondingAuthor, @keywords)
-  `);
-  stmt.run({
-    ...article,
-    authors: JSON.stringify(article.authors),
-    chartData: JSON.stringify(article.chartData),
-    isHtmlArticle: article.isHtmlArticle ? 1 : 0
-  });
+  const doc = new Article({ ...article, id: article.id || Date.now() });
+  await doc.save();
   return getArticleById(article.id);
 }
 
-export function deleteArticle(id) {
+export async function deleteArticle(id) {
   if (useJsonDb) {
     const targetId = parseInt(id);
-    const initialLen = jsonData.articles.length;
+    const before = jsonData.articles.length;
     jsonData.articles = jsonData.articles.filter(art => art.id !== targetId);
-    if (jsonData.articles.length < initialLen) {
-      saveJsonDb();
-      return true;
-    }
+    if (jsonData.articles.length < before) { saveJsonDb(); return true; }
     return false;
   }
-
-  const stmt = db.prepare('DELETE FROM articles WHERE id = ?');
-  const info = stmt.run(id);
-  return info.changes > 0;
+  const result = await Article.deleteOne({ id: parseInt(id) });
+  return result.deletedCount > 0;
 }
 
-export function getSubmissions() {
+export async function getSubmissions() {
   if (useJsonDb) {
     return [...jsonData.submissions].sort((a, b) => b.id - a.id);
   }
-
-  const stmt = db.prepare('SELECT * FROM submissions ORDER BY id DESC');
-  return stmt.all();
+  const docs = await Submission.find().sort({ _id: -1 }).lean();
+  return docs.map(d => {
+    const id = d._id.toString();
+    delete d.__v; delete d._id;
+    return { id, ...d };
+  });
 }
 
-export function addSubmission(sub) {
+export async function addSubmission(sub) {
   if (useJsonDb) {
     const maxId = jsonData.submissions.reduce((max, s) => s.id > max ? s.id : max, 0);
-    const newSub = {
-      id: maxId + 1,
-      ...sub
-    };
+    const newSub = { id: maxId + 1, ...sub };
     jsonData.submissions.push(newSub);
     saveJsonDb();
     return newSub;
   }
-
-  const stmt = db.prepare(`
-    INSERT INTO submissions (title, abstract, category, authorName, authorEmail, affiliation, coAuthors, manuscriptFile, coverLetterFile, submittedAt)
-    VALUES (@title, @abstract, @category, @authorName, @authorEmail, @affiliation, @coAuthors, @manuscriptFile, @coverLetterFile, @submittedAt)
-  `);
-  const info = stmt.run(sub);
-  return { id: info.lastInsertRowid, ...sub };
+  const doc = new Submission(sub);
+  await doc.save();
+  const id = doc._id.toString();
+  return { id, ...sub };
 }
 
-export function deleteSubmission(id) {
+export async function deleteSubmission(id) {
   if (useJsonDb) {
     const targetId = parseInt(id);
-    const initialLen = jsonData.submissions.length;
+    const before = jsonData.submissions.length;
     jsonData.submissions = jsonData.submissions.filter(s => s.id !== targetId);
-    if (jsonData.submissions.length < initialLen) {
-      saveJsonDb();
-      return true;
-    }
+    if (jsonData.submissions.length < before) { saveJsonDb(); return true; }
     return false;
   }
-
-  const stmt = db.prepare('DELETE FROM submissions WHERE id = ?');
-  const info = stmt.run(id);
-  return info.changes > 0;
+  // id could be a MongoDB ObjectId string or a numeric string
+  let result;
+  try {
+    result = await Submission.deleteOne({ _id: new mongoose.Types.ObjectId(id) });
+  } catch {
+    result = { deletedCount: 0 };
+  }
+  return result.deletedCount > 0;
 }
 
-export function getImages() {
+export async function getImages() {
   if (useJsonDb) {
     return [...jsonData.images].sort((a, b) => b.id - a.id);
   }
-
-  const stmt = db.prepare('SELECT * FROM images ORDER BY id DESC');
-  return stmt.all();
+  const docs = await Image.find().sort({ _id: -1 }).lean();
+  return docs.map(d => {
+    const id = d._id.toString();
+    delete d.__v; delete d._id;
+    return { id, ...d };
+  });
 }
 
-export function addImage(img) {
+export async function addImage(img) {
   if (useJsonDb) {
     const maxId = jsonData.images.reduce((max, i) => i.id > max ? i.id : max, 0);
-    const newImg = {
-      id: maxId + 1,
-      ...img
-    };
+    const newImg = { id: maxId + 1, ...img };
     jsonData.images.push(newImg);
     saveJsonDb();
     return newImg;
   }
-
-  const stmt = db.prepare(`
-    INSERT INTO images (filename, url, uploadedAt)
-    VALUES (@filename, @url, @uploadedAt)
-  `);
-  const info = stmt.run(img);
-  return { id: info.lastInsertRowid, ...img };
+  const doc = new Image(img);
+  await doc.save();
+  const id = doc._id.toString();
+  return { id, ...img };
 }
 
-export function deleteImage(id) {
+export async function deleteImage(id) {
   if (useJsonDb) {
     const targetId = parseInt(id);
-    const initialLen = jsonData.images.length;
+    const before = jsonData.images.length;
     jsonData.images = jsonData.images.filter(img => img.id !== targetId);
-    if (jsonData.images.length < initialLen) {
-      saveJsonDb();
-      return true;
-    }
+    if (jsonData.images.length < before) { saveJsonDb(); return true; }
     return false;
   }
-
-  const stmt = db.prepare('DELETE FROM images WHERE id = ?');
-  const info = stmt.run(id);
-  return info.changes > 0;
+  let result;
+  try {
+    result = await Image.deleteOne({ _id: new mongoose.Types.ObjectId(id) });
+  } catch {
+    result = { deletedCount: 0 };
+  }
+  return result.deletedCount > 0;
 }

@@ -73,9 +73,9 @@ app.post('/api/auth/verify', (req, res) => {
 });
 
 // 1. Get all articles
-app.get('/api/articles', (req, res) => {
+app.get('/api/articles', async (req, res) => {
   try {
-    const articles = db.getArticles();
+    const articles = await db.getArticles();
     res.json(articles);
   } catch (err) {
     console.error('Error fetching articles:', err);
@@ -87,7 +87,7 @@ app.get('/api/articles', (req, res) => {
 app.post('/api/articles', upload.fields([
   { name: 'htmlFile', maxCount: 1 },
   { name: 'pdfFile', maxCount: 1 }
-]), (req, res) => {
+]), async (req, res) => {
   try {
     const {
       title,
@@ -168,7 +168,7 @@ app.post('/api/articles', upload.fields([
       keywords: keywords || ''
     };
 
-    const savedArticle = db.addArticle(newArticle);
+    const savedArticle = await db.addArticle(newArticle);
 
     // Clean up temporary HTML file copy if not needed (since content is database-stored)
     try {
@@ -185,11 +185,11 @@ app.post('/api/articles', upload.fields([
 });
 
 // 3. Delete an article
-app.delete('/api/articles/:id', (req, res) => {
+app.delete('/api/articles/:id', async (req, res) => {
   try {
     const articleId = parseInt(req.params.id);
-    const article = db.getArticleById(articleId);
-    
+    const article = await db.getArticleById(articleId);
+
     if (!article) {
       return res.status(404).json({ error: 'Article not found' });
     }
@@ -203,7 +203,7 @@ app.delete('/api/articles/:id', (req, res) => {
       }
     }
 
-    const success = db.deleteArticle(articleId);
+    const success = await db.deleteArticle(articleId);
     if (success) {
       res.json({ message: 'Article deleted successfully' });
     } else {
@@ -216,9 +216,9 @@ app.delete('/api/articles/:id', (req, res) => {
 });
 
 // 4. Get all submitted manuscripts
-app.get('/api/submissions', (req, res) => {
+app.get('/api/submissions', async (req, res) => {
   try {
-    const submissions = db.getSubmissions();
+    const submissions = await db.getSubmissions();
     res.json(submissions);
   } catch (err) {
     console.error('Error fetching submissions:', err);
@@ -230,7 +230,7 @@ app.get('/api/submissions', (req, res) => {
 app.post('/api/submissions', upload.fields([
   { name: 'manuscriptFile', maxCount: 1 },
   { name: 'coverLetterFile', maxCount: 1 }
-]), (req, res) => {
+]), async (req, res) => {
   try {
     const {
       title,
@@ -262,7 +262,7 @@ app.post('/api/submissions', upload.fields([
       submittedAt: new Date().toISOString()
     };
 
-    const savedSubmission = db.addSubmission(newSubmission);
+    const savedSubmission = await db.addSubmission(newSubmission);
     res.status(201).json(savedSubmission);
   } catch (err) {
     console.error('Error adding submission:', err);
@@ -271,10 +271,10 @@ app.post('/api/submissions', upload.fields([
 });
 
 // 6. Delete/Archive a submission
-app.delete('/api/submissions/:id', (req, res) => {
+app.delete('/api/submissions/:id', async (req, res) => {
   try {
     const subId = parseInt(req.params.id);
-    const submissions = db.getSubmissions();
+    const submissions = await db.getSubmissions();
     const submission = submissions.find(s => s.id === subId);
 
     if (!submission) {
@@ -299,7 +299,7 @@ app.delete('/api/submissions/:id', (req, res) => {
       }
     }
 
-    const success = db.deleteSubmission(subId);
+    const success = await db.deleteSubmission(subId);
     if (success) {
       res.json({ message: 'Submission deleted successfully' });
     } else {
@@ -312,9 +312,9 @@ app.delete('/api/submissions/:id', (req, res) => {
 });
 
 // 7. Get all uploaded images
-app.get('/api/images', (req, res) => {
+app.get('/api/images', async (req, res) => {
   try {
-    const images = db.getImages();
+    const images = await db.getImages();
     res.json(images);
   } catch (err) {
     console.error('Error fetching images:', err);
@@ -323,7 +323,7 @@ app.get('/api/images', (req, res) => {
 });
 
 // 8. Upload a new image
-app.post('/api/images', upload.single('imageFile'), (req, res) => {
+app.post('/api/images', upload.single('imageFile'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'Image file is required' });
@@ -335,7 +335,7 @@ app.post('/api/images', upload.single('imageFile'), (req, res) => {
       uploadedAt: new Date().toISOString()
     };
 
-    const savedImage = db.addImage(newImage);
+    const savedImage = await db.addImage(newImage);
     res.status(201).json(savedImage);
   } catch (err) {
     console.error('Error uploading image:', err);
@@ -344,10 +344,10 @@ app.post('/api/images', upload.single('imageFile'), (req, res) => {
 });
 
 // 9. Delete an image
-app.delete('/api/images/:id', (req, res) => {
+app.delete('/api/images/:id', async (req, res) => {
   try {
     const imageId = parseInt(req.params.id);
-    const images = db.getImages();
+    const images = await db.getImages();
     const image = images.find(img => img.id === imageId);
 
     if (!image) {
@@ -363,7 +363,7 @@ app.delete('/api/images/:id', (req, res) => {
       }
     }
 
-    const success = db.deleteImage(imageId);
+    const success = await db.deleteImage(imageId);
     if (success) {
       res.json({ message: 'Image deleted successfully' });
     } else {

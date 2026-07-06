@@ -12,12 +12,12 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "better-sqlite3": "^12.11.1",
     "canvas-confetti": "^1.9.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "lucide-react": "^0.344.0",
+    "mongoose": "^9.7.3",
     "multer": "^2.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
