@@ -28,24 +28,30 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Serve uploaded PDFs and HTML files statically
-app.use('/uploads', express.static(uploadsDir));
-
-// Multer config for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    // Generate unique filename to avoid collisions
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+// Serve uploaded files dynamically from database (or local directory fallback)
+app.get('/uploads/:filename', async (req, res) => {
+  try {
+    const file = await db.getFile(req.params.filename);
+    if (!file) {
+      return res.status(404).send('File not found');
+    }
+    res.setHeader('Content-Type', file.contentType);
+    res.send(file.data);
+  } catch (err) {
+    console.error('Error serving file:', err);
+    res.status(500).send('Internal Server Error');
   }
 });
 
+// Helper to generate unique filenames for database storage
+const generateFilename = (fieldname, originalname) => {
+  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+  const ext = path.extname(originalname);
+  return fieldname + '-' + uniqueSuffix + ext;
+};
+
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 25 * 1024 * 1024 }, // 25MB max limit
   fileFilter: (req, file, cb) => {
     // Allowed extensions
@@ -115,7 +121,15 @@ app.post('/api/articles', upload.fields([
     const pdfFile = req.files.pdfFile[0];
 
     // Read the HTML file text content to save as the article's body (fullText)
-    const htmlContent = fs.readFileSync(htmlFile.path, 'utf8');
+    const htmlContent = htmlFile.buffer.toString('utf8');
+
+    // Generate unique filenames
+    const htmlFilename = generateFilename('htmlFile', htmlFile.originalname);
+    const pdfFilename = generateFilename('pdfFile', pdfFile.originalname);
+
+    // Save files
+    await db.saveFile(htmlFilename, htmlFile.mimetype, htmlFile.buffer);
+    await db.saveFile(pdfFilename, pdfFile.mimetype, pdfFile.buffer);
 
     // Store authors as raw HTML string (supports <sup>/<sub> tags for academic notation)
     const parsedAuthors = authors;
@@ -153,7 +167,7 @@ app.post('/api/articles', upload.fields([
       authors: parsedAuthors,
       date: formattedDate,
       readTime: '10 min read',
-      pdfUrl: `/uploads/${pdfFile.filename}`, // Served statically
+      pdfUrl: `/uploads/${pdfFilename}`,
       chartType: randomChartType,
       chartData: randomChartData,
       doi: doi || '',
@@ -169,13 +183,6 @@ app.post('/api/articles', upload.fields([
     };
 
     const savedArticle = await db.addArticle(newArticle);
-
-    // Clean up temporary HTML file copy if not needed (since content is database-stored)
-    try {
-      fs.unlinkSync(htmlFile.path);
-    } catch (e) {
-      console.warn('Could not delete temporary HTML file:', e.message);
-    }
 
     res.status(201).json(savedArticle);
   } catch (err) {
@@ -194,13 +201,10 @@ app.delete('/api/articles/:id', async (req, res) => {
       return res.status(404).json({ error: 'Article not found' });
     }
 
-    // If PDF file exists, try to delete it from disk
+    // If PDF file exists, try to delete it from database/fallback
     if (article.pdfUrl && article.pdfUrl.startsWith('/uploads/')) {
       const filename = article.pdfUrl.replace('/uploads/', '');
-      const filepath = path.join(uploadsDir, filename);
-      if (fs.existsSync(filepath)) {
-        fs.unlinkSync(filepath);
-      }
+      await db.deleteFile(filename);
     }
 
     const success = await db.deleteArticle(articleId);
@@ -249,6 +253,15 @@ app.post('/api/submissions', upload.fields([
     const manuscriptFile = req.files.manuscriptFile[0];
     const coverLetterFile = req.files.coverLetterFile ? req.files.coverLetterFile[0] : null;
 
+    const manuscriptFilename = generateFilename('manuscriptFile', manuscriptFile.originalname);
+    await db.saveFile(manuscriptFilename, manuscriptFile.mimetype, manuscriptFile.buffer);
+
+    let coverLetterFilename = null;
+    if (coverLetterFile) {
+      coverLetterFilename = generateFilename('coverLetterFile', coverLetterFile.originalname);
+      await db.saveFile(coverLetterFilename, coverLetterFile.mimetype, coverLetterFile.buffer);
+    }
+
     const newSubmission = {
       title: title,
       abstract: abstract,
@@ -257,8 +270,8 @@ app.post('/api/submissions', upload.fields([
       authorEmail: authorEmail,
       affiliation: affiliation,
       coAuthors: coAuthors || '',
-      manuscriptFile: `/uploads/${manuscriptFile.filename}`,
-      coverLetterFile: coverLetterFile ? `/uploads/${coverLetterFile.filename}` : null,
+      manuscriptFile: `/uploads/${manuscriptFilename}`,
+      coverLetterFile: coverLetterFilename ? `/uploads/${coverLetterFilename}` : null,
       submittedAt: new Date().toISOString()
     };
 
@@ -273,9 +286,9 @@ app.post('/api/submissions', upload.fields([
 // 6. Delete/Archive a submission
 app.delete('/api/submissions/:id', async (req, res) => {
   try {
-    const subId = parseInt(req.params.id);
+    const subId = req.params.id;
     const submissions = await db.getSubmissions();
-    const submission = submissions.find(s => s.id === subId);
+    const submission = submissions.find(s => String(s.id) === String(subId));
 
     if (!submission) {
       return res.status(404).json({ error: 'Submission not found' });
@@ -284,19 +297,13 @@ app.delete('/api/submissions/:id', async (req, res) => {
     // Try deleting manuscript file
     if (submission.manuscriptFile && submission.manuscriptFile.startsWith('/uploads/')) {
       const filename = submission.manuscriptFile.replace('/uploads/', '');
-      const filepath = path.join(uploadsDir, filename);
-      if (fs.existsSync(filepath)) {
-        fs.unlinkSync(filepath);
-      }
+      await db.deleteFile(filename);
     }
 
     // Try deleting cover letter file
     if (submission.coverLetterFile && submission.coverLetterFile.startsWith('/uploads/')) {
       const filename = submission.coverLetterFile.replace('/uploads/', '');
-      const filepath = path.join(uploadsDir, filename);
-      if (fs.existsSync(filepath)) {
-        fs.unlinkSync(filepath);
-      }
+      await db.deleteFile(filename);
     }
 
     const success = await db.deleteSubmission(subId);
@@ -329,9 +336,12 @@ app.post('/api/images', upload.single('imageFile'), async (req, res) => {
       return res.status(400).json({ error: 'Image file is required' });
     }
 
+    const imageFilename = generateFilename('imageFile', req.file.originalname);
+    await db.saveFile(imageFilename, req.file.mimetype, req.file.buffer);
+
     const newImage = {
       filename: req.file.originalname,
-      url: `/uploads/${req.file.filename}`,
+      url: `/uploads/${imageFilename}`,
       uploadedAt: new Date().toISOString()
     };
 
@@ -346,21 +356,18 @@ app.post('/api/images', upload.single('imageFile'), async (req, res) => {
 // 9. Delete an image
 app.delete('/api/images/:id', async (req, res) => {
   try {
-    const imageId = parseInt(req.params.id);
+    const imageId = req.params.id;
     const images = await db.getImages();
-    const image = images.find(img => img.id === imageId);
+    const image = images.find(img => String(img.id) === String(imageId));
 
     if (!image) {
       return res.status(404).json({ error: 'Image not found' });
     }
 
-    // Try deleting image file from disk
+    // Try deleting image file from database/fallback
     if (image.url && image.url.startsWith('/uploads/')) {
       const filename = image.url.replace('/uploads/', '');
-      const filepath = path.join(uploadsDir, filename);
-      if (fs.existsSync(filepath)) {
-        fs.unlinkSync(filepath);
-      }
+      await db.deleteFile(filename);
     }
 
     const success = await db.deleteImage(imageId);

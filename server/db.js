@@ -67,10 +67,17 @@ const imageSchema = new mongoose.Schema({
   uploadedAt: { type: String, required: true },
 });
 
+const fileSchema = new mongoose.Schema({
+  filename:    { type: String, required: true, unique: true },
+  contentType: { type: String, required: true },
+  data:        { type: Buffer, required: true },
+  uploadedAt:  { type: Date, default: Date.now }
+});
+
 // ─── Connect to MongoDB ──────────────────────────────────────────────────────
 const MONGODB_URI = process.env.MONGODB_URI;
 
-let Article, Submission, Image;
+let Article, Submission, Image, FileModel;
 
 if (MONGODB_URI) {
   try {
@@ -80,6 +87,7 @@ if (MONGODB_URI) {
     Article    = mongoose.model('Article',    articleSchema);
     Submission = mongoose.model('Submission', submissionSchema);
     Image      = mongoose.model('Image',      imageSchema);
+    FileModel  = mongoose.model('File',       fileSchema);
   } catch (err) {
     console.error('Failed to connect to MongoDB — falling back to JSON db:', err.message);
     useJsonDb = true;
@@ -252,5 +260,50 @@ export async function deleteImage(id) {
   } catch {
     result = { deletedCount: 0 };
   }
+  return result.deletedCount > 0;
+}
+
+export async function saveFile(filename, contentType, buffer) {
+  if (useJsonDb) {
+    const dest = path.join(dataDir, 'uploads', filename);
+    fs.writeFileSync(dest, buffer);
+    return;
+  }
+  const doc = new FileModel({ filename, contentType, data: buffer });
+  await doc.save();
+}
+
+export async function getFile(filename) {
+  if (useJsonDb) {
+    const dest = path.join(dataDir, 'uploads', filename);
+    if (fs.existsSync(dest)) {
+      const data = fs.readFileSync(dest);
+      let contentType = 'application/octet-stream';
+      const ext = path.extname(filename).toLowerCase();
+      if (ext === '.pdf') contentType = 'application/pdf';
+      else if (ext === '.html') contentType = 'text/html';
+      else if (ext === '.png') contentType = 'image/png';
+      else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+      else if (ext === '.gif') contentType = 'image/gif';
+      else if (ext === '.svg') contentType = 'image/svg+xml';
+      else if (ext === '.webp') contentType = 'image/webp';
+      return { data, contentType };
+    }
+    return null;
+  }
+  const doc = await FileModel.findOne({ filename }).lean();
+  if (!doc) return null;
+  return { data: doc.data.buffer || doc.data, contentType: doc.contentType };
+}
+
+export async function deleteFile(filename) {
+  if (useJsonDb) {
+    const dest = path.join(dataDir, 'uploads', filename);
+    if (fs.existsSync(dest)) {
+      try { fs.unlinkSync(dest); } catch {}
+    }
+    return true;
+  }
+  const result = await FileModel.deleteOne({ filename });
   return result.deletedCount > 0;
 }
