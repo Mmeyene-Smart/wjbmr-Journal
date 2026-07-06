@@ -46,7 +46,7 @@ const articleSchema = new mongoose.Schema({
   affiliations:       { type: String, default: '' },
   correspondingAuthor:{ type: String, default: '' },
   keywords:           { type: String, default: '' },
-}, { _id: false }); // use numeric `id` as the key, not MongoDB ObjectId
+}); // use default _id generation, keep custom numeric id field for lookups
 
 const submissionSchema = new mongoose.Schema({
   title:          { type: String, required: true },
