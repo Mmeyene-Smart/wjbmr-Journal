@@ -6,6 +6,7 @@ import Archives from './components/Archives';
 import Guidelines from './components/Guidelines';
 import AdminPanel from './components/AdminPanel';
 import ArticleDetail from './components/ArticleDetail';
+import EditorialBoard from './components/EditorialBoard';
 import { ArrowRight, Menu, X, BookOpen, GraduationCap, Mail, ShieldAlert, Key } from 'lucide-react';
 import API_BASE from './api.js';
 
@@ -137,6 +138,8 @@ export default function App() {
         );
       case 'Archives':
         return <Archives onNavigate={handleNavigate} />;
+      case 'EditorialBoard':
+        return <EditorialBoard />;
       case 'Guidelines':
         return <Guidelines />;
       case 'Admin':
@@ -205,13 +208,20 @@ export default function App() {
         <div className="container navbar-container">
           {/* Desktop Nav Links */}
           <div className="nav-links" style={{ display: 'flex' }}>
-            {['Home', 'About', 'Current', 'Archives', 'Guidelines'].map((page) => (
+            {[
+              { label: 'Home', page: 'Home' },
+              { label: 'About', page: 'About' },
+              { label: 'Current', page: 'Current' },
+              { label: 'Archives', page: 'Archives' },
+              { label: 'Editorial Board', page: 'EditorialBoard' },
+              { label: 'Guidelines', page: 'Guidelines' },
+            ].map(({ label, page }) => (
               <button
                 key={page}
                 onClick={() => handleNavigate(page)}
                 className={`nav-link ${currentPage === page ? 'active' : ''}`}
               >
-                {page}
+                {label}
               </button>
             ))}
             {isAdminAuthenticated && (
@@ -266,7 +276,14 @@ export default function App() {
             gap: '12px',
             boxShadow: 'var(--shadow-md)'
           }}>
-            {['Home', 'About', 'Current', 'Archives', 'Guidelines'].map((page) => (
+            {[
+              { label: 'Home', page: 'Home' },
+              { label: 'About', page: 'About' },
+              { label: 'Current', page: 'Current' },
+              { label: 'Archives', page: 'Archives' },
+              { label: 'Editorial Board', page: 'EditorialBoard' },
+              { label: 'Guidelines', page: 'Guidelines' },
+            ].map(({ label, page }) => (
               <button
                 key={page}
                 onClick={() => handleNavigate(page)}
@@ -283,7 +300,7 @@ export default function App() {
                   cursor: 'pointer'
                 }}
               >
-                {page}
+                {label}
               </button>
             ))}
             {isAdminAuthenticated && (
@@ -338,6 +355,7 @@ export default function App() {
                 <li className="footer-link" onClick={() => handleNavigate('About')}>Journal Information</li>
                 <li className="footer-link" onClick={() => handleNavigate('Current')}>Current Issue</li>
                 <li className="footer-link" onClick={() => handleNavigate('Archives')}>Past Archives</li>
+                <li className="footer-link" onClick={() => handleNavigate('EditorialBoard')}>Editorial Board</li>
                 <li className="footer-link" onClick={() => handleNavigate('Guidelines')}>Author Guidelines</li>
               </ul>
             </div>
@@ -352,7 +370,7 @@ export default function App() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Mail size={16} />
-                  <a href="mailto:editor@wjbmr.org" style={{ color: 'var(--accent-light)' }}>editor@wjbmr.org</a>
+                  <a href="mailto:wjbmr2014@gmail.com" style={{ color: 'var(--accent-light)' }}>wjbmr2014@gmail.com</a>
                 </div>
                 
                 {/* Admin Access Trigger */}

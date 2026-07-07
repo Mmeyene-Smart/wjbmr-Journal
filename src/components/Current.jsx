@@ -294,8 +294,13 @@ export default function Current({ articles = [], onNavigateToArticle }) {
           {filteredArticles.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {filteredArticles.map(art => (
-                <div key={art.id} className="glass-card" style={{ padding: '24px', margin: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '20px' }} className="responsive-home-grid">
+                <div 
+                  key={art.id} 
+                  className="glass-card" 
+                  style={{ padding: '24px', margin: 0, cursor: 'pointer' }}
+                  onClick={() => onNavigateToArticle(art.id)}
+                >
+                  <div className="article-card-row">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '1' }}>
                       <span style={{
                         fontSize: '11px',
@@ -307,12 +312,11 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                       </span>
                       
                       <h4 
-                        onClick={() => onNavigateToArticle(art.id)}
                         style={{ 
                           fontSize: '17px', 
                           color: 'var(--primary-color)', 
                           lineHeight: '1.4',
-                          cursor: 'pointer',
+                          margin: 0,
                           transition: 'var(--transition)'
                         }}
                         onMouseEnter={(e) => e.target.style.color = 'var(--accent-color)'}
@@ -334,9 +338,12 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                     </div>
 
                     {/* Actions Box */}
-                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                       <button 
-                        onClick={() => toggleAbstract(art.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleAbstract(art.id);
+                        }}
                         style={{
                           padding: '6px 14px',
                           borderRadius: 'var(--radius-full)',
@@ -357,15 +364,11 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                       </button>
 
                       <a 
-                        href={art.pdfUrl || '#'}
-                        onClick={(e) => {
-                          if (!art.pdfUrl || art.pdfUrl === '#') {
-                            e.preventDefault();
-                            alert("PDF Simulated Download");
-                          }
-                        }}
-                        target={art.pdfUrl && art.pdfUrl !== '#' ? '_blank' : undefined}
+                        href={art.pdfUrl && art.pdfUrl !== '#' ? (art.pdfUrl.startsWith('/uploads/') ? art.pdfUrl : art.pdfUrl) : '/sample_article.pdf'}
+                        target="_blank"
                         rel="noopener noreferrer"
+                        download
+                        onClick={(e) => e.stopPropagation()}
                         style={{
                           padding: '6px 14px',
                           borderRadius: 'var(--radius-full)',
@@ -378,7 +381,8 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                           display: 'flex',
                           alignItems: 'center',
                           gap: '6px',
-                          transition: 'var(--transition)'
+                          transition: 'var(--transition)',
+                          textDecoration: 'none'
                         }}
                       >
                         <Download size={12} /> PDF
@@ -388,14 +392,17 @@ export default function Current({ articles = [], onNavigateToArticle }) {
 
                   {/* Expandable Abstract Panel */}
                   {expandedId === art.id && (
-                    <div style={{
-                      marginTop: '16px',
-                      paddingTop: '16px',
-                      borderTop: '1px solid var(--border-color)',
-                      backgroundColor: 'var(--bg-light)',
-                      padding: '16px',
-                      borderRadius: '8px'
-                    }}>
+                    <div 
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        marginTop: '16px',
+                        paddingTop: '16px',
+                        borderTop: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-light)',
+                        padding: '16px',
+                        borderRadius: '8px'
+                      }}
+                    >
                       <h5 style={{ fontSize: '13px', color: 'var(--primary-dark)', marginBottom: '8px' }}>Abstract</h5>
                       
                       {/* Check if article is dynamic HTML upload or default text */}

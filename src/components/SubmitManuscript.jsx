@@ -234,7 +234,7 @@ export default function SubmitManuscript() {
               {errors.title && <div style={{ color: '#dc2626', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} />{errors.title}</div>}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div className="responsive-form-row">
               <div className="form-group">
                 <label className="form-label">Journal Section *</label>
                 <select name="category" value={formData.category} onChange={handleInputChange} className="form-select">
@@ -285,7 +285,7 @@ export default function SubmitManuscript() {
           <div>
             <h3 style={{ fontSize: '20px', marginBottom: '24px', color: 'var(--primary-dark)' }}>Corresponding Author Details</h3>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div className="responsive-form-row">
               <div className="form-group">
                 <label className="form-label">Full Name * (with academic titles)</label>
                 <input 

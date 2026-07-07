@@ -13,40 +13,31 @@ export default function About() {
           </h1>
           <div className="about-journal-divider"></div>
           
-          <div className="about-circle-frame" style={{ borderRadius: 'var(--radius-md)' }}>
+          {/* Journal Cover Image — fills the box properly without cropping */}
+          <div className="about-circle-frame" style={{ 
+            borderRadius: 'var(--radius-md)',
+            width: '100%',
+            maxWidth: '490px',
+            height: 'auto',
+            border: 'none',
+            background: 'none',
+            boxShadow: 'var(--shadow-lg)',
+            overflow: 'hidden',
+            marginBottom: 0,
+            display: 'block'
+          }}>
             <img 
-              src="/wjbmr-about.jpg" 
+              src="/wjbm-new-about.jpeg" 
               alt="World Journal of Biomedical Research Cover" 
               className="about-circle-img"
+              style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 'var(--radius-md)' }}
               onError={(e) => {
-                e.target.style.display = 'none';
+                e.target.src = '/wjbmr-about.jpg';
               }}
             />
           </div>
-          
-          {/* Logo Icons at the bottom (Reference 2 logos) */}
-          <div className="about-logos">
-            {/* University of Uyo Logo */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-              <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', background: '#fff', border: '2px solid var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src="/college_logo.jpg" alt="University of Uyo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-              <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-muted)' }}>University of Uyo</span>
-            </div>
-            
-            {/* WJBMR Society Crest Mock Logo */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-              <svg viewBox="0 0 100 100" width="60" height="60" style={{ fill: 'var(--accent-color)' }}>
-                <circle cx="50" cy="50" r="45" fill="none" stroke="var(--accent-color)" strokeWidth="3" />
-                <path d="M35,35 A15,15 0 1,1 65,35 A15,15 0 1,1 35,35" fill="none" stroke="var(--accent-color)" strokeWidth="3" />
-                <path d="M30,55 C30,45 70,45 70,55 C70,65 30,65 30,55" fill="none" stroke="var(--primary-color)" strokeWidth="3" />
-                <path d="M50,18 L50,82" stroke="var(--accent-color)" strokeWidth="2" />
-                <text x="50" y="93" fontSize="8" textAnchor="middle" fill="var(--primary-dark)" fontWeight="bold">WJBMR</text>
-              </svg>
-              <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-muted)' }}>CHS Society</span>
-            </div>
-          </div>
         </div>
+
 
         {/* Right Column (Reference 2 Right Side) */}
         <div className="about-right-col">
@@ -136,7 +127,7 @@ export default function About() {
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                 <Mail size={18} style={{ color: 'var(--primary-color)', flexShrink: 0 }} />
                 <div>
-                  <a href="mailto:editor@wjbmr.org">editor@wjbmr.org</a> / <a href="mailto:wjbmr.editor@gmail.com">wjbmr.editor@gmail.com</a>
+                  <a href="mailto:wjbmr2014@gmail.com">wjbmr2014@gmail.com</a>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -150,37 +141,6 @@ export default function About() {
         </div>
       </div>
 
-      {/* Editorial Board (Additional premium detail) */}
-      <div style={{ marginTop: '60px' }}>
-        <h2 className="section-title">Editorial Board & Administration</h2>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', 
-          gap: '20px',
-          marginTop: '24px'
-        }}>
-          <div className="glass-card" style={{ padding: '20px', textAlign: 'center', borderTop: '4px solid var(--accent-color)' }}>
-            <div style={{ fontWeight: '800', color: 'var(--primary-dark)' }}>Prof. Anietie E. Moses</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 12px 0' }}>Editor-in-Chief</div>
-            <div style={{ fontSize: '13px' }}>Medical Microbiologist, University of Uyo</div>
-          </div>
-          <div className="glass-card" style={{ padding: '20px', textAlign: 'center', borderTop: '4px solid var(--primary-color)' }}>
-            <div style={{ fontWeight: '800', color: 'var(--primary-dark)' }}>Prof. Friday E. Okonofua</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 12px 0' }}>Associate Editor</div>
-            <div style={{ fontSize: '13px' }}>Obstetrics & Gynaecology, CHS UNIUYO</div>
-          </div>
-          <div className="glass-card" style={{ padding: '20px', textAlign: 'center', borderTop: '4px solid var(--primary-color)' }}>
-            <div style={{ fontWeight: '800', color: 'var(--primary-dark)' }}>Dr. Emem A. Bassey</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 12px 0' }}>Managing Editor</div>
-            <div style={{ fontSize: '13px' }}>Clinical Pharmacology, CHS UNIUYO</div>
-          </div>
-          <div className="glass-card" style={{ padding: '20px', textAlign: 'center', borderTop: '4px solid var(--primary-color)' }}>
-            <div style={{ fontWeight: '800', color: 'var(--primary-dark)' }}>Prof. Eme F. Archibong</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 12px 0' }}>Editorial Adviser</div>
-            <div style={{ fontSize: '13px' }}>Biomedical Pathology, University of Calabar</div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

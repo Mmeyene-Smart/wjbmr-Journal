@@ -19,12 +19,14 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
     .filter(art => art.id !== article.id)
     .slice(0, 5); // display up to 5 related articles
 
-  const handleDownload = (e) => {
-    if (!article.pdfUrl || article.pdfUrl === '#') {
-      e.preventDefault();
-      alert(`Downloading PDF for: "${article.title}"... (Simulated)`);
-    }
+  // Resolve a usable PDF URL — fall back to the sample PDF if none is set
+  const resolvePdfUrl = (url) => {
+    if (!url || url === '#') return '/sample_article.pdf';
+    if (url.startsWith('/uploads/')) return `${API_BASE}${url}`;
+    return url;
   };
+
+  const pdfUrl = resolvePdfUrl(article.pdfUrl);
 
   const getAuthorsDisplay = () => {
     if (typeof article.authors === 'string') return article.authors;
@@ -74,10 +76,10 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
                 <BookOpen size={15} /> {article.volume || 'Volume 12'} No {article.issue ? article.issue.split(' ')[1] : '2'}
               </span>
               <a 
-                href={article.pdfUrl && article.pdfUrl.startsWith('/uploads/') ? `${API_BASE}${article.pdfUrl}` : (article.pdfUrl || '#')} 
-                onClick={handleDownload}
-                target={article.pdfUrl && article.pdfUrl !== '#' ? '_blank' : undefined}
+                href={pdfUrl}
+                target="_blank"
                 rel="noopener noreferrer"
+                download
                 style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
@@ -145,10 +147,10 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
               </div>
               
               <a 
-                href={article.pdfUrl && article.pdfUrl.startsWith('/uploads/') ? `${API_BASE}${article.pdfUrl}` : (article.pdfUrl || '#')} 
-                onClick={handleDownload}
-                target={article.pdfUrl && article.pdfUrl !== '#' ? '_blank' : undefined}
+                href={pdfUrl}
+                target="_blank"
                 rel="noopener noreferrer"
+                download
                 className="submit-form-btn"
                 style={{
                   width: 'auto',
@@ -162,7 +164,7 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
                   color: 'var(--bg-white)'
                 }}
               >
-                <Download size={16} /> Download Full PDF (Top)
+                <Download size={16} /> Download Full PDF
               </a>
             </div>
 
@@ -204,10 +206,10 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
               marginTop: '40px'
             }}>
               <a 
-                href={article.pdfUrl && article.pdfUrl.startsWith('/uploads/') ? `${API_BASE}${article.pdfUrl}` : (article.pdfUrl || '#')} 
-                onClick={handleDownload}
-                target={article.pdfUrl && article.pdfUrl !== '#' ? '_blank' : undefined}
+                href={pdfUrl}
+                target="_blank"
                 rel="noopener noreferrer"
+                download
                 className="submit-form-btn"
                 style={{
                   width: 'auto',
@@ -221,7 +223,7 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
                   color: 'var(--bg-white)'
                 }}
               >
-                <Download size={18} /> Download Full PDF (Bottom)
+                <Download size={18} /> Download Full PDF 
               </a>
             </div>
 

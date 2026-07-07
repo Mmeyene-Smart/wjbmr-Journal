@@ -153,7 +153,7 @@ export default function Home({ onNavigate, onNavigateToArticle, articles = [] })
   return (
     <div className="container">
       {/* Hero Search Section */}
-      <div style={{
+      <div className="hero-section" style={{
         background: 'linear-gradient(135deg, rgba(230, 240, 250, 0.5) 0%, rgba(255, 255, 255, 0.9) 100%)',
         border: '1px solid var(--border-color)',
         borderRadius: 'var(--radius-lg)',
@@ -180,7 +180,7 @@ export default function Home({ onNavigate, onNavigateToArticle, articles = [] })
         }}>
           <TrendingUp size={16} /> Open Access Peer-Reviewed Journal
         </div>
-        <h2 style={{ fontSize: '32px', maxWidth: '800px', lineHeight: '1.2' }}>
+        <h2 className="hero-title" style={{ fontSize: '32px', maxWidth: '800px', lineHeight: '1.2' }}>
           Advancing Biomedical Discovery and Health Research Globally
         </h2>
         <p style={{ color: 'var(--text-muted)', maxWidth: '600px', fontSize: '15px' }}>
@@ -267,16 +267,11 @@ export default function Home({ onNavigate, onNavigateToArticle, articles = [] })
 
           {/* Latest Publications (matches Reference 1) */}
           <div>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '20px'
-            }}>
+            <div className="pub-header">
               <h2 className="section-title" style={{ margin: 0 }}>Latest publications</h2>
               
               {/* Category Filter Chips */}
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div className="filter-chips">
                 {['All', 'ORIGINAL RESEARCH', 'CLINICAL STUDY', 'REVIEW ARTICLE'].map(cat => (
                   <button 
                     key={cat}
@@ -291,7 +286,8 @@ export default function Home({ onNavigate, onNavigateToArticle, articles = [] })
                       cursor: 'pointer',
                       backgroundColor: selectedCategory === cat ? 'var(--primary-color)' : 'var(--bg-white)',
                       color: selectedCategory === cat ? 'var(--bg-white)' : 'var(--text-muted)',
-                      transition: 'var(--transition)'
+                      transition: 'var(--transition)',
+                      whiteSpace: 'nowrap'
                     }}
                   >
                     {cat === 'All' ? 'All' : cat.replace(' ARTICLE', '')}
@@ -427,11 +423,14 @@ export default function Home({ onNavigate, onNavigateToArticle, articles = [] })
                 </button>
               </li>
               <li>
-                <a 
-                  href="#"
+                <button 
+                  onClick={() => onNavigate('EditorialBoard')}
                   style={{
+                    background: 'none',
+                    border: 'none',
                     color: 'var(--primary-color)',
                     fontWeight: '600',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
@@ -439,7 +438,7 @@ export default function Home({ onNavigate, onNavigateToArticle, articles = [] })
                   }}
                 >
                   <Users size={16} /> Editorial Board & Contacts
-                </a>
+                </button>
               </li>
             </ul>
           </div>
