@@ -70,6 +70,37 @@ a:hover {
   /* defined inline per-component; this class is the mobile-override hook */
 }
 
+/* ── Article Detail page ─────────────────────────────── */
+.article-detail-card {
+  padding: 36px;
+}
+
+.article-detail-title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--primary-dark);
+  margin-bottom: 16px;
+}
+
+.article-pdf-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 32px;
+  background-color: var(--primary-light);
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-light);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.article-pdf-btn {
+  width: auto !important;
+}
+
 /* Responsive Form Rows — side-by-side on desktop, stacked on mobile */
 .responsive-form-row {
   display: grid;
@@ -838,6 +869,22 @@ a:hover {
     font-size: 22px;
   }
 
+  /* Article Detail page */
+  .article-detail-card {
+    padding: 20px;
+  }
+  .article-detail-title {
+    font-size: 20px;
+  }
+  .article-pdf-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .article-pdf-btn {
+    width: 100% !important;
+    justify-content: center;
+  }
+
   /* Footer */
   .footer-grid {
     grid-template-columns: 1fr;
@@ -846,6 +893,41 @@ a:hover {
     flex-direction: column;
     gap: 12px;
     text-align: center;
+  }
+}
+
+/* ── Extra small screens (≤ 480 px) ───────────────────── */
+@media (max-width: 480px) {
+  .container {
+    padding: 0 12px;
+  }
+  .banner-short-title {
+    font-size: 16px;
+  }
+  .banner-full-title {
+    font-size: 15px;
+  }
+  .glass-card {
+    padding: 16px;
+  }
+  .article-detail-card {
+    padding: 14px;
+  }
+  .article-detail-title {
+    font-size: 17px;
+  }
+  .section-title {
+    font-size: 19px;
+  }
+  .submit-form-btn {
+    font-size: 14px;
+    padding: 12px 18px;
+  }
+  .pub-title {
+    font-size: 15px;
+  }
+  .footer {
+    padding: 40px 0 24px;
   }
 }
 

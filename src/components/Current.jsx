@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
 import { FileText, Download, Share2, MessageSquare, ChevronDown, ChevronUp, Search as SearchIcon, Minus, Plus } from 'lucide-react';
+import API_BASE from '../api.js';
 
 export default function Current({ articles = [], onNavigateToArticle }) {
   const [expandedId, setExpandedId] = useState(null);
-  
+
+  // Resolve a usable PDF URL — prepend API_BASE for /uploads/ paths
+  const resolvePdfUrl = (url) => {
+    if (!url || url === '#') return '/sample_article.pdf';
+    if (url.startsWith('/uploads/')) return `${API_BASE}${url}`;
+    return url;
+  };
+
   // Sidebar state
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedVolumes, setSelectedVolumes] = useState([]);
@@ -364,7 +372,7 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                       </button>
 
                       <a 
-                        href={art.pdfUrl && art.pdfUrl !== '#' ? (art.pdfUrl.startsWith('/uploads/') ? art.pdfUrl : art.pdfUrl) : '/sample_article.pdf'}
+                        href={resolvePdfUrl(art.pdfUrl)}
                         target="_blank"
                         rel="noopener noreferrer"
                         download

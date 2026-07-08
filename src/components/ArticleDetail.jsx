@@ -40,17 +40,10 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
         
         {/* Left Column - Article Content */}
         <div>
-          <div className="glass-card" style={{ padding: '36px' }}>
+          <div className="glass-card article-detail-card">
             
             {/* 1. Article Title */}
-            <h2 style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '26px',
-              fontWeight: '800',
-              lineHeight: '1.3',
-              color: 'var(--primary-dark)',
-              marginBottom: '16px'
-            }}>
+            <h2 className="article-detail-title">
               {article.title}
             </h2>
 
@@ -128,19 +121,9 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
             </div>
 
             {/* 4. Top Download PDF Button */}
-            <div style={{
-              display: 'flex',
-              gap: '12px',
-              marginBottom: '32px',
-              backgroundColor: 'var(--primary-light)',
-              padding: '16px',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--accent-light)',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
+            <div className="article-pdf-bar">
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <FileCheck style={{ color: 'var(--primary-color)' }} />
+                <FileCheck style={{ color: 'var(--primary-color)', flexShrink: 0 }} />
                 <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--primary-dark)' }}>
                   Full Manuscript PDF File available for download
                 </span>
@@ -151,7 +134,7 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
                 target="_blank"
                 rel="noopener noreferrer"
                 download
-                className="submit-form-btn"
+                className="submit-form-btn article-pdf-btn"
                 style={{
                   width: 'auto',
                   padding: '10px 20px',
@@ -161,7 +144,8 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
                   alignItems: 'center',
                   gap: '8px',
                   textDecoration: 'none',
-                  color: 'var(--bg-white)'
+                  color: 'var(--bg-white)',
+                  flexShrink: 0
                 }}
               >
                 <Download size={16} /> Download Full PDF
@@ -241,23 +225,25 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
             gap: '12px',
             marginBottom: '24px'
           }}>
-            {/* Circular small logo */}
+            {/* Journal Logo */}
             <div style={{
-              width: '40px',
-              height: '40px',
+              width: '52px',
+              height: '52px',
               borderRadius: '50%',
-              backgroundColor: 'var(--primary-light)',
-              color: 'var(--primary-color)',
+              overflow: 'hidden',
+              border: '2px solid var(--primary-color)',
+              flexShrink: 0,
+              background: '#fff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontWeight: 'bold',
-              fontFamily: 'var(--font-display)',
-              fontSize: '12px',
-              border: '2px solid var(--primary-color)',
-              flexShrink: 0
+              boxShadow: 'var(--shadow-sm)'
             }}>
-              Wjbmr
+              <img
+                src="/college_logo.jpg"
+                alt="WJBMR Logo"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
             </div>
             
             <div style={{ textAlign: 'left' }}>
