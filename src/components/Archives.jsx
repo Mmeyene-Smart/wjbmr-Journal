@@ -1,14 +1,73 @@
-import React, { useState } from 'react';
-import { Calendar, ChevronDown, ChevronRight, FolderOpen } from 'lucide-react';
-
-const ARCHIVE_VOLUMES = [];
+import React, { useState, useEffect } from 'react';
+import { Calendar, ChevronDown, ChevronRight, FolderOpen, RefreshCw } from 'lucide-react';
+import API_BASE from '../api.js';
 
 export default function Archives({ onNavigate }) {
   const [openVolumeIdx, setOpenVolumeIdx] = useState(0);
+  const [archives, setArchives] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/archives`)
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        setArchives(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
 
   const toggleVolume = (idx) => {
     setOpenVolumeIdx(openVolumeIdx === idx ? null : idx);
   };
+
+  // Group raw archives flat array into hierarchial structure
+  const getGroupedArchives = () => {
+    const volumesMap = {};
+
+    archives.forEach(arch => {
+      const volName = arch.volume;
+      const issName = arch.issue;
+
+      if (!volumesMap[volName]) {
+        volumesMap[volName] = {};
+      }
+      if (!volumesMap[volName][issName]) {
+        volumesMap[volName][issName] = [];
+      }
+
+      volumesMap[volName][issName].push({
+        id: arch.id,
+        title: arch.title,
+        pdfUrl: arch.pdfUrl
+      });
+    });
+
+    return Object.keys(volumesMap).map(volName => {
+      const issuesMap = volumesMap[volName];
+      const issuesList = Object.keys(issuesMap).map(issName => ({
+        name: issName,
+        papers: issuesMap[issName]
+      }));
+
+      return {
+        volume: volName,
+        issues: issuesList
+      };
+    });
+  };
+
+  const archiveVolumes = getGroupedArchives();
+
+  // Sidebar stats
+  let totalIssues = 0;
+  let totalArticles = 0;
+  archiveVolumes.forEach(vol => {
+    totalIssues += vol.issues.length;
+    vol.issues.forEach(iss => {
+      totalArticles += iss.papers.length;
+    });
+  });
 
   return (
     <div className="container">
@@ -37,28 +96,40 @@ export default function Archives({ onNavigate }) {
               fontSize: '12px',
               color: 'var(--text-muted)'
             }}>
-              <strong>Total Issues:</strong> 0 Issues<br />
-              <strong>Total Articles:</strong> 0 Papers
+              <strong>Total Issues:</strong> {totalIssues} Issue{totalIssues !== 1 ? 's' : ''}<br />
+              <strong>Total Articles:</strong> {totalArticles} Paper{totalArticles !== 1 ? 's' : ''}
             </div>
           </div>
         </div>
 
         {/* Accordion List */}
         <div>
-          <div className="accordion">
-            {ARCHIVE_VOLUMES.length === 0 ? (
-              <div style={{
-                textAlign: 'center',
-                padding: '40px',
-                border: '1px dashed var(--border-color)',
-                borderRadius: 'var(--radius-md)',
-                color: 'var(--text-muted)',
-                backgroundColor: 'var(--bg-white)'
-              }}>
-                No archives available.
-              </div>
-            ) : (
-              ARCHIVE_VOLUMES.map((vol, vIdx) => {
+          {loading ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '60px',
+              border: '1px dashed var(--border-color)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--text-muted)',
+              backgroundColor: 'var(--bg-white)'
+            }}>
+              <RefreshCw size={36} className="animate-spin" style={{ margin: '0 auto 12px', color: 'var(--primary-color)' }} />
+              Loading journal archives...
+            </div>
+          ) : archiveVolumes.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '40px',
+              border: '1px dashed var(--border-color)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--text-muted)',
+              backgroundColor: 'var(--bg-white)'
+            }}>
+              No archives available.
+            </div>
+          ) : (
+            <div className="accordion">
+              {archiveVolumes.map((vol, vIdx) => {
                 const isOpen = openVolumeIdx === vIdx;
                 return (
                   <div key={vIdx} className="accordion-item">
@@ -95,11 +166,12 @@ export default function Archives({ onNavigate }) {
                               {iss.papers.map((paper, pIdx) => (
                                 <a 
                                   key={pIdx}
-                                  href="#"
-                                  onClick={(e) => { e.preventDefault(); onNavigate('Current'); }}
+                                  href={`${API_BASE}${paper.pdfUrl}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
                                   className="archive-paper-link"
                                 >
-                                  <span>{paper}</span>
+                                  <span>{paper.title}</span>
                                   <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
                                 </a>
                               ))}
@@ -111,10 +183,12 @@ export default function Archives({ onNavigate }) {
                   </div>
                 );
               })
-            )}
-          </div>
+            }
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
+

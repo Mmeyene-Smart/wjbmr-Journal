@@ -382,8 +382,79 @@ app.delete('/api/images/:id', async (req, res) => {
   }
 });
 
+// 10. Get all archives
+app.get('/api/archives', async (req, res) => {
+  try {
+    const archives = await db.getArchives();
+    res.json(archives);
+  } catch (err) {
+    console.error('Error fetching archives:', err);
+    res.status(500).json({ error: 'Failed to retrieve archives' });
+  }
+});
+
+// 11. Upload a new archive
+app.post('/api/archives', upload.single('archiveFile'), async (req, res) => {
+  try {
+    const { title, volume, issue } = req.body;
+    if (!req.file) {
+      return res.status(400).json({ error: 'Archive PDF file is required' });
+    }
+    if (!title || !volume || !issue) {
+      return res.status(400).json({ error: 'Title, Volume, and Issue are required fields' });
+    }
+
+    const archiveFilename = generateFilename('archiveFile', req.file.originalname);
+    await db.saveFile(archiveFilename, req.file.mimetype, req.file.buffer);
+
+    const newArchive = {
+      title,
+      volume,
+      issue,
+      pdfUrl: `/uploads/${archiveFilename}`,
+      uploadedAt: new Date().toISOString()
+    };
+
+    const savedArchive = await db.addArchive(newArchive);
+    res.status(201).json(savedArchive);
+  } catch (err) {
+    console.error('Error uploading archive:', err);
+    res.status(500).json({ error: err.message || 'Failed to upload archive' });
+  }
+});
+
+// 12. Delete an archive
+app.delete('/api/archives/:id', async (req, res) => {
+  try {
+    const archiveId = req.params.id;
+    const archives = await db.getArchives();
+    const archive = archives.find(arch => String(arch.id) === String(archiveId));
+
+    if (!archive) {
+      return res.status(404).json({ error: 'Archive not found' });
+    }
+
+    // Try deleting PDF file from database/fallback
+    if (archive.pdfUrl && archive.pdfUrl.startsWith('/uploads/')) {
+      const filename = archive.pdfUrl.replace('/uploads/', '');
+      await db.deleteFile(filename);
+    }
+
+    const success = await db.deleteArchive(archiveId);
+    if (success) {
+      res.json({ message: 'Archive deleted successfully' });
+    } else {
+      res.status(500).json({ error: 'Failed to delete archive from database' });
+    }
+  } catch (err) {
+    console.error('Error deleting archive:', err);
+    res.status(500).json({ error: 'Failed to delete archive' });
+  }
+});
+
 // Serve frontend assets if built
 const distPath = path.join(__dirname, 'dist');
+
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
 

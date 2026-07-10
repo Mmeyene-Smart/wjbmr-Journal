@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Upload, FileCode, CheckCircle, AlertTriangle, Eye, ArrowLeft,
   RefreshCw, FileText, Trash2, Copy, Image, Check, Code2,
-  PenSquare, Library, Plus, ExternalLink, ClipboardCopy
+  PenSquare, Library, Plus, ExternalLink, ClipboardCopy, FolderOpen
 } from 'lucide-react';
 import API_BASE from '../api.js';
 
@@ -81,6 +81,20 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
   const [imageError, setImageError] = useState(null);
   const [copyFeedback, setCopyFeedback] = useState({});
   const [imageSearch, setImageSearch] = useState('');
+
+  /* ── Archives state ── */
+  const [archives, setArchives] = useState([]);
+  const [loadingArchives, setLoadingArchives] = useState(false);
+  const [uploadingArchive, setUploadingArchive] = useState(false);
+  const [archiveError, setArchiveError] = useState(null);
+  const [archiveForm, setArchiveForm] = useState({
+    title: '',
+    volume: 'Volume 12 (2026)',
+    issue: 'Issue 2 (June 2026)'
+  });
+  const [archiveFile, setArchiveFile] = useState(null);
+  const [archiveFileName, setArchiveFileName] = useState('');
+  const archiveFileInputRef = useRef(null);
 
   /* ── Refs ── */
   const fileInputRef = useRef(null);
@@ -169,10 +183,65 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
 
   useEffect(() => { fetchImages(); }, [fetchImages]);
 
+  /* ── Archives ── */
+  const fetchArchives = useCallback(() => {
+    setLoadingArchives(true);
+    fetch(`${API_BASE}/api/archives`)
+      .then(res => { if (!res.ok) throw new Error(); return res.json(); })
+      .then(data => setArchives(data))
+      .catch(() => {})
+      .finally(() => setLoadingArchives(false));
+  }, []);
+
+  const handleDeleteArchive = (id) => {
+    if (!window.confirm('Permanently delete this archive document?')) return;
+    fetch(`${API_BASE}/api/archives/${id}`, { method: 'DELETE' })
+      .then(res => { if (!res.ok) throw new Error(); setArchives(prev => prev.filter(a => a.id !== id)); })
+      .catch(() => alert('Failed to delete archive'));
+  };
+
+  const handleArchiveUpload = (e) => {
+    e.preventDefault();
+    if (!archiveFile) {
+      setArchiveError('Please select a PDF file to upload.');
+      return;
+    }
+    if (!archiveForm.title.trim() || !archiveForm.volume.trim() || !archiveForm.issue.trim()) {
+      setArchiveError('All fields (Title, Volume, Issue) are required.');
+      return;
+    }
+
+    setUploadingArchive(true);
+    setArchiveError(null);
+
+    const fd = new FormData();
+    fd.append('archiveFile', archiveFile);
+    fd.append('title', archiveForm.title);
+    fd.append('volume', archiveForm.volume);
+    fd.append('issue', archiveForm.issue);
+
+    fetch(`${API_BASE}/api/archives`, { method: 'POST', body: fd })
+      .then(res => res.ok ? res.json() : res.json().then(d => Promise.reject(d.error)))
+      .then(newArch => {
+        setArchives(prev => [newArch, ...prev]);
+        setArchiveForm({
+          title: '',
+          volume: 'Volume 12 (2026)',
+          issue: 'Issue 2 (June 2026)'
+        });
+        setArchiveFile(null);
+        setArchiveFileName('');
+        if (archiveFileInputRef.current) archiveFileInputRef.current.value = '';
+      })
+      .catch(err => setArchiveError(err || 'Upload failed'))
+      .finally(() => setUploadingArchive(false));
+  };
+
   useEffect(() => {
     if (activeTab === 'submissions') fetchSubmissions();
     if (activeTab === 'images') fetchImages();
-  }, [activeTab, fetchImages]);
+    if (activeTab === 'archives') fetchArchives();
+  }, [activeTab, fetchImages, fetchArchives]);
 
   const handleImageUpload = (file) => {
     if (!file) return;
@@ -342,6 +411,15 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
               background: 'var(--primary-color)', color: '#fff', borderRadius: '20px',
               fontSize: '11px', padding: '1px 7px', fontWeight: '700'
             }}>{submissions.length}</span>
+          )}
+        </TabBtn>
+        <TabBtn active={activeTab === 'archives'} onClick={() => setActiveTab('archives')}>
+          <FolderOpen size={15} /> Archives
+          {archives.length > 0 && (
+            <span style={{
+              background: 'var(--primary-color)', color: '#fff', borderRadius: '20px',
+              fontSize: '11px', padding: '1px 7px', fontWeight: '700'
+            }}>{archives.length}</span>
           )}
         </TabBtn>
       </div>
@@ -1097,6 +1175,225 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
               </tbody>
             </table>
           )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════
+          TAB: ARCHIVES
+      ═══════════════════════════════════════════════════════════════ */}
+      {activeTab === 'archives' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '24px' }} className="responsive-home-grid">
+            
+            {/* Upload form */}
+            <div className="glass-card" style={{ padding: '24px', height: 'fit-content' }}>
+              <h3 style={{ fontSize: '18px', color: 'var(--primary-dark)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Plus size={18} /> Upload Archive Document
+              </h3>
+              
+              <form onSubmit={handleArchiveUpload} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-dark)', marginBottom: '6px' }}>Volume *</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    placeholder="e.g. Volume 12 (2026)" 
+                    value={archiveForm.volume}
+                    onChange={e => setArchiveForm(prev => ({ ...prev, volume: e.target.value }))}
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-dark)', marginBottom: '6px' }}>Issue *</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    placeholder="e.g. Issue 2 (June 2026)" 
+                    value={archiveForm.issue}
+                    onChange={e => setArchiveForm(prev => ({ ...prev, issue: e.target.value }))}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-dark)', marginBottom: '6px' }}>Document / Paper Title *</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    placeholder="e.g. Full Issue PDF, or Paper title" 
+                    value={archiveForm.title}
+                    onChange={e => setArchiveForm(prev => ({ ...prev, title: e.target.value }))}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-dark)', marginBottom: '6px' }}>PDF File *</label>
+                  <div 
+                    onClick={() => !uploadingArchive && archiveFileInputRef.current.click()}
+                    style={{
+                      border: '2px dashed var(--border-color)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '20px',
+                      textAlign: 'center',
+                      cursor: uploadingArchive ? 'not-allowed' : 'pointer',
+                      background: 'var(--bg-light)',
+                      fontSize: '13px',
+                      color: 'var(--text-muted)'
+                    }}
+                  >
+                    <Upload size={24} style={{ margin: '0 auto 8px', color: 'var(--text-muted)' }} />
+                    {archiveFileName ? (
+                      <strong style={{ color: 'var(--primary-color)' }}>{archiveFileName}</strong>
+                    ) : (
+                      <span>Select issue or paper PDF (Max 25MB)</span>
+                    )}
+                    <input 
+                      type="file" 
+                      ref={archiveFileInputRef} 
+                      accept="application/pdf" 
+                      style={{ display: 'none' }} 
+                      onChange={e => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          setArchiveFile(file);
+                          setArchiveFileName(file.name);
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {archiveError && (
+                  <div style={{ color: '#dc2626', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <AlertTriangle size={14} /> {archiveError}
+                  </div>
+                )}
+
+                <button 
+                  type="submit" 
+                  className="submit-form-btn" 
+                  style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '8px' }} 
+                  disabled={uploadingArchive}
+                >
+                  {uploadingArchive ? (
+                    <><RefreshCw size={16} className="animate-spin" /> Uploading...</>
+                  ) : (
+                    <><Upload size={16} /> Upload Archive</>
+                  )}
+                </button>
+              </form>
+            </div>
+
+            {/* List of archives */}
+            <div className="glass-card" style={{ padding: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <div>
+                  <h3 style={{ fontSize: '18px', color: 'var(--primary-dark)', margin: 0 }}>Active Archive Files</h3>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
+                    Total uploaded documents: {archives.length}
+                  </p>
+                </div>
+                <button 
+                  onClick={fetchArchives} 
+                  className="submit-btn" 
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '6px 12px' }} 
+                  disabled={loadingArchives}
+                >
+                  <RefreshCw size={12} className={loadingArchives ? 'animate-spin' : ''} /> Refresh
+                </button>
+              </div>
+
+              {loadingArchives ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  <RefreshCw size={36} className="animate-spin" style={{ margin: '0 auto 12px auto', color: 'var(--primary-color)' }} />
+                  Loading archives...
+                </div>
+              ) : archives.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '50px 20px', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)', background: 'var(--bg-light)' }}>
+                  <FolderOpen size={40} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
+                  <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--text-dark)' }}>No archive documents uploaded</strong>
+                  Upload a PDF document to start compiling the archives list.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '550px', overflowY: 'auto', paddingRight: '4px' }}>
+                  {archives.map(arch => (
+                    <div 
+                      key={arch.id}
+                      style={{
+                        border: '1px solid var(--border-color)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: '12px 16px',
+                        background: 'var(--bg-white)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '12px'
+                      }}
+                    >
+                      <div style={{ flex: '1', minWidth: '0' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--primary-color)', marginBottom: '2px' }}>
+                          {arch.volume} &bull; {arch.issue}
+                        </div>
+                        <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-dark)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={arch.title}>
+                          {arch.title}
+                        </div>
+                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          Uploaded: {new Date(arch.uploadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </div>
+                      </div>
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <a 
+                          href={`${API_BASE}${arch.pdfUrl}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          style={{
+                            padding: '6px 10px',
+                            fontSize: '11px',
+                            borderRadius: '4px',
+                            background: 'var(--primary-light)',
+                            color: 'var(--primary-dark)',
+                            textDecoration: 'none',
+                            fontWeight: '600',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <ExternalLink size={12} /> View
+                        </a>
+                        <button
+                          onClick={() => handleDeleteArchive(arch.id)}
+                          style={{
+                            padding: '6px',
+                            background: 'none',
+                            border: 'none',
+                            color: '#dc2626',
+                            cursor: 'pointer',
+                            borderRadius: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'background-color 0.2s'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#fee2e2'}
+                          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                          title="Delete Archive"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
+
         </div>
       )}
 

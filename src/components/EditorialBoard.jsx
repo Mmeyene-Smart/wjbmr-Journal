@@ -4,56 +4,138 @@ import { Mail, ShieldCheck, Award, BookOpen, Users, MapPin } from 'lucide-react'
 export default function EditorialBoard() {
   const EDITORIAL_MEMBERS = [
     {
+      name: 'Dr. Emmanuel Olu Megbelayin',
+      role: 'Editor-In-Chief',
+      specialty: 'Department of Ophthalmology',
+      institution: 'University of Uyo, Uyo',
+      email: 'favouredolu@yahoo.com'
+    },
+    {
+      name: 'Dr. Timothy Ekwere',
+      role: 'Deputy Editor-In-Chief',
+      specialty: 'Department of Haematology',
+      institution: 'University of Uyo, Uyo',
+      email: 'timothyekwere@yahoo.com'
+    },
+    {
+      name: 'Prof. Felix Uduma',
+      role: 'Promotion/Marketing Editor',
+      specialty: 'Department of Radiology',
+      institution: 'University of Uyo, Uyo',
+      email: 'felixuduma@yahoo.com'
+    },
+    {
+      name: 'Dr. Agantem Ekuma',
+      role: 'Secretary of the Board',
+      specialty: 'Department of Medical Microbiology & Parasitology',
+      institution: 'University of Uyo, Uyo',
+      email: 'agantemekuma@uniuyo.edu.ng'
+    },
+    {
+      name: 'Prof. Dianabasi Eduwem',
+      role: 'Editorial Board Member',
+      specialty: 'Department of Radiology',
+      institution: 'University of Uyo, Uyo',
+      email: 'eduwemjoy@yahoo.com'
+    },
+    {
+      name: 'Prof. Eyo Ekpe',
+      role: 'Editorial Board Member',
+      specialty: 'Department of Surgery',
+      institution: 'University of Uyo, Uyo',
+      email: 'docekpe@yahoo.com'
+    },
+    {
+      name: 'Prof. Enobong Ikpeme',
+      role: 'Editorial Board Member',
+      specialty: 'Department of Paediatrics',
+      institution: 'University of Uyo, Uyo',
+      email: 'enpeks@yahoo.com'
+    },
+    {
       name: 'Prof. Anietie E. Moses',
-      role: 'Editor-in-Chief',
-      specialty: 'Medical Microbiology & Parasitology',
-      institution: 'College of Health Sciences, University of Uyo, Nigeria',
-      email: 'wjbmr2014@gmail.com'
+      role: 'Editorial Board Member',
+      specialty: 'Dept. of Medical Microbiology & Parasitology',
+      institution: 'University of Uyo, Uyo',
+      email: 'anietiemoses@uniuyo.edu.ng, amoses264@gmail.com'
     },
     {
-      name: 'Prof. Friday E. Okonofua',
-      role: 'Associate Editor',
-      specialty: 'Obstetrics & Gynaecology',
-      institution: 'College of Health Sciences, University of Uyo, Nigeria',
-      email: 'wjbmr2014@gmail.com'
+      name: 'Prof. Inyang A. Atting',
+      role: 'Editorial Board Member',
+      specialty: 'Dept. of Medical Microbiology & Parasitology',
+      institution: 'University of Uyo',
+      email: 'dr_atting@yahoo.com'
     },
     {
-      name: 'Dr. Emem A. Bassey',
-      role: 'Managing Editor',
-      specialty: 'Clinical Pharmacology & Therapeutics',
-      institution: 'College of Health Sciences, University of Uyo, Nigeria',
-      email: 'wjbmr2014@gmail.com'
+      name: 'Prof. Aniekan Abasiattai',
+      role: 'Editorial Board Member',
+      specialty: 'Department of Obstetrics & Gynaecology',
+      institution: 'University of Uyo, Uyo',
+      email: 'animan74@yahoo.com'
     },
     {
-      name: 'Prof. Eme F. Archibong',
+      name: 'Dr. Timothy Nottidge',
+      role: 'Editorial Board Member',
+      specialty: 'Department of Orthopaedics',
+      institution: 'University of Uyo, Uyo',
+      email: 'timnottidge@yahoo.com'
+    },
+    {
+      name: 'Itohowo Ebong',
+      role: 'Editorial Assistant',
+      specialty: 'Institute of Health Research and Development',
+      institution: 'University of Uyo Teaching Hospital, Uyo',
+      email: 'ebongitohowo@gmail.com'
+    },
+    {
+      name: 'Prof. Joseph J. Andy',
       role: 'Editorial Adviser',
-      specialty: 'Biomedical Pathology',
-      institution: 'University of Calabar, Nigeria',
-      email: 'wjbmr2014@gmail.com'
+      specialty: 'Department of Internal Medicine',
+      institution: 'University of Uyo, Uyo',
+      email: 'andyumanah@gmail.com'
     },
     {
-      name: 'Prof. Bassey S. Umoh',
-      role: 'Editorial Board Member',
-      specialty: 'Human Physiology',
-      institution: 'University of Uyo, Nigeria',
-      email: 'wjbmr2014@gmail.com'
+      name: 'Prof. Paul Ekwere',
+      role: 'Editorial Adviser',
+      specialty: 'Department of Surgery',
+      institution: 'University of Uyo, Uyo',
+      email: 'pekwere@hotmail.com'
     },
     {
-      name: 'Prof. Grace O. Akinola',
-      role: 'Editorial Board Member',
-      specialty: 'Clinical Biochemistry',
-      institution: 'Obafemi Awolowo University, Ile-Ife, Nigeria',
-      email: 'wjbmr2014@gmail.com'
+      name: 'Prof. Memfin D. Ekpo',
+      role: 'Editorial Adviser',
+      specialty: 'Dept. of Pathology',
+      institution: 'University of Uyo',
+      email: 'memfinekpo@gmail.com'
+    },
+    {
+      name: 'Prof. Etete Peters',
+      role: 'Editorial Adviser',
+      specialty: 'Dept. of Internal Medicine',
+      institution: 'University of Uyo',
+      email: 'etetepeters@yahoo.com'
+    },
+    {
+      name: 'Prof. Victor A. Inem',
+      role: 'Editorial Adviser',
+      specialty: 'Dept. of Family Medicine',
+      institution: 'University of Lagos',
+      email: 'vinem@yahoo.com'
+    },
+    {
+      name: 'Prof. Ekere Essien',
+      role: 'Editorial Adviser',
+      specialty: 'College of Pharmacy',
+      institution: 'University of Houston, Houston, Texas, USA',
+      email: 'ejessien@central.uh.edu'
     }
   ];
 
   const borderColors = [
     'var(--accent-color)',
     'var(--primary-color)',
-    'var(--primary-color)',
+    'var(--primary-dark)',
     'var(--text-muted)',
-    'var(--primary-color)',
-    'var(--primary-color)',
   ];
 
   return (
@@ -151,10 +233,19 @@ export default function EditorialBoard() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  fontSize: '12px'
+                  fontSize: '11px',
+                  flexWrap: 'wrap'
                 }}>
                   <Mail size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                  <a href={`mailto:${member.email}`} style={{ color: 'var(--text-muted)', wordBreak: 'break-all' }}>{member.email}</a>
+                  {member.email.split(',').map((email, eIdx) => {
+                    const cleanEmail = email.trim();
+                    return (
+                      <React.Fragment key={eIdx}>
+                        {eIdx > 0 && <span style={{ color: 'var(--text-muted)', margin: '0 2px' }}>|</span>}
+                        <a href={`mailto:${cleanEmail}`} style={{ color: 'var(--text-muted)', wordBreak: 'break-all' }}>{cleanEmail}</a>
+                      </React.Fragment>
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -186,19 +277,23 @@ export default function EditorialBoard() {
 
           <div className="glass-card" style={{ padding: '24px', backgroundColor: 'var(--primary-light)', borderColor: 'var(--accent-light)' }}>
             <h3 style={{ fontSize: '16px', color: 'var(--primary-dark)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-              <Mail size={18} /> Editorial Office
+              <Mail size={18} /> Correspondences
             </h3>
-            <p style={{ fontSize: '13px', color: 'var(--text-dark)', lineHeight: '1.5' }}>
-              For editorial inquiries, board nominations, or review invitations:
+            <p style={{ fontSize: '13px', color: 'var(--text-dark)', lineHeight: '1.5', marginBottom: '8px' }}>
+              All correspondence should be forwarded to the:
             </p>
-            <a href="mailto:wjbmr2014@gmail.com" style={{ fontSize: '13px', color: 'var(--primary-color)', fontWeight: 'bold', marginTop: '8px', display: 'block' }}>
-              wjbmr2014@gmail.com
+            <strong style={{ display: 'block', fontSize: '13px', color: 'var(--primary-dark)' }}>Editor-in-Chief</strong>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: '1.4' }}>
+              Department of Ophthalmology<br />
+              University of Uyo Teaching Hospital, Uyo / University of Uyo, Uyo<br />
+              Akwa Ibom State, Nigeria
+            </p>
+            <a href="mailto:favouredolu@yahoo.com" style={{ fontSize: '13px', color: 'var(--primary-color)', fontWeight: 'bold', marginTop: '8px', display: 'block' }}>
+              favouredolu@yahoo.com
             </a>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
-              College of Health Sciences,<br />University of Uyo, Nigeria
-            </p>
           </div>
         </div>
+
 
       </div>
     </div>

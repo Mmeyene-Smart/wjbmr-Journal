@@ -74,10 +74,19 @@ const fileSchema = new mongoose.Schema({
   uploadedAt:  { type: Date, default: Date.now }
 });
 
+const archiveSchema = new mongoose.Schema({
+  title:      { type: String, required: true },
+  volume:     { type: String, required: true },
+  issue:      { type: String, required: true },
+  pdfUrl:     { type: String, required: true },
+  uploadedAt: { type: String, required: true },
+});
+
+
 // ─── Connect to MongoDB ──────────────────────────────────────────────────────
 const MONGODB_URI = process.env.MONGODB_URI;
 
-let Article, Submission, Image, FileModel;
+let Article, Submission, Image, FileModel, Archive;
 
 if (MONGODB_URI) {
   try {
@@ -88,6 +97,7 @@ if (MONGODB_URI) {
     Submission = mongoose.model('Submission', submissionSchema);
     Image      = mongoose.model('Image',      imageSchema);
     FileModel  = mongoose.model('File',       fileSchema);
+    Archive    = mongoose.model('Archive',    archiveSchema);
   } catch (err) {
     console.error('Failed to connect to MongoDB — falling back to JSON db:', err.message);
     useJsonDb = true;
@@ -102,12 +112,15 @@ if (useJsonDb) {
   if (fs.existsSync(jsonDbPath)) {
     try {
       jsonData = JSON.parse(fs.readFileSync(jsonDbPath, 'utf8'));
+      if (!jsonData.archives) {
+        jsonData.archives = [];
+      }
     } catch (e) {
       console.error('Error parsing journal-db.json, starting empty:', e);
-      jsonData = { articles: [], submissions: [], images: [] };
+      jsonData = { articles: [], submissions: [], images: [], archives: [] };
     }
   } else {
-    jsonData = { articles: [], submissions: [], images: [] };
+    jsonData = { articles: [], submissions: [], images: [], archives: [] };
     saveJsonDb();
   }
 }
@@ -307,3 +320,48 @@ export async function deleteFile(filename) {
   const result = await FileModel.deleteOne({ filename });
   return result.deletedCount > 0;
 }
+
+export async function getArchives() {
+  if (useJsonDb) {
+    return [...(jsonData.archives || [])].sort((a, b) => b.id - a.id);
+  }
+  const docs = await Archive.find().sort({ _id: -1 }).lean();
+  return docs.map(d => {
+    const id = d._id.toString();
+    delete d.__v; delete d._id;
+    return { id, ...d };
+  });
+}
+
+export async function addArchive(archive) {
+  if (useJsonDb) {
+    const archivesList = jsonData.archives || [];
+    const maxId = archivesList.reduce((max, a) => a.id > max ? a.id : max, 0);
+    const newArch = { id: maxId + 1, ...archive };
+    jsonData.archives = [...archivesList, newArch];
+    saveJsonDb();
+    return newArch;
+  }
+  const doc = new Archive(archive);
+  await doc.save();
+  const id = doc._id.toString();
+  return { id, ...archive };
+}
+
+export async function deleteArchive(id) {
+  if (useJsonDb) {
+    const targetId = parseInt(id);
+    const before = (jsonData.archives || []).length;
+    jsonData.archives = (jsonData.archives || []).filter(a => a.id !== targetId);
+    if (jsonData.archives.length < before) { saveJsonDb(); return true; }
+    return false;
+  }
+  let result;
+  try {
+    result = await Archive.deleteOne({ _id: new mongoose.Types.ObjectId(id) });
+  } catch {
+    result = { deletedCount: 0 };
+  }
+  return result.deletedCount > 0;
+}
+
