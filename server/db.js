@@ -189,6 +189,30 @@ export async function deleteArticle(id) {
   return result.deletedCount > 0;
 }
 
+export async function updateArticle(id, updatedFields) {
+  if (useJsonDb) {
+    const targetId = parseInt(id);
+    const index = jsonData.articles.findIndex(art => art.id === targetId);
+    if (index !== -1) {
+      jsonData.articles[index] = { ...jsonData.articles[index], ...updatedFields };
+      saveJsonDb();
+      return jsonData.articles[index];
+    }
+    return null;
+  }
+  const result = await Article.findOneAndUpdate(
+    { id: parseInt(id) },
+    { $set: updatedFields },
+    { new: true }
+  ).lean();
+  if (result) {
+    delete result.__v;
+    delete result._id;
+  }
+  return result;
+}
+
+
 export async function getSubmissions() {
   if (useJsonDb) {
     return [...jsonData.submissions].sort((a, b) => b.id - a.id);

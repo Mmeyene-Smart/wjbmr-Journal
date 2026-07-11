@@ -97,6 +97,10 @@ export default function App() {
     setArticles(prev => [newArticle, ...prev]);
   };
 
+  const handleUpdateArticle = (updatedArticle) => {
+    setArticles(prev => prev.map(a => a.id === updatedArticle.id ? updatedArticle : a));
+  };
+
   const handleDeleteArticle = async (articleId) => {
     try {
       const res = await fetch(`${API_BASE}/api/articles/${articleId}`, { method: 'DELETE' });
@@ -147,6 +151,7 @@ export default function App() {
           <AdminPanel 
             onAddArticle={handleAddArticle}
             onDeleteArticle={handleDeleteArticle}
+            onUpdateArticle={handleUpdateArticle}
             articles={articles}
             onBackToHome={() => handleNavigate('Home')} 
           />

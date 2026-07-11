@@ -219,6 +219,78 @@ app.delete('/api/articles/:id', async (req, res) => {
   }
 });
 
+// 3b. Update an article
+app.put('/api/articles/:id', upload.fields([
+  { name: 'htmlFile', maxCount: 1 },
+  { name: 'pdfFile', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    const articleId = parseInt(req.params.id);
+    const existing = await db.getArticleById(articleId);
+    if (!existing) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+
+    const {
+      title,
+      authors,
+      affiliations,
+      correspondingAuthor,
+      keywords,
+      category,
+      volume,
+      issue,
+      pages,
+      doi,
+      abstract
+    } = req.body;
+
+    const updatedFields = {
+      title: title || existing.title,
+      authors: authors || existing.authors,
+      affiliations: affiliations !== undefined ? affiliations : existing.affiliations,
+      correspondingAuthor: correspondingAuthor !== undefined ? correspondingAuthor : existing.correspondingAuthor,
+      keywords: keywords !== undefined ? keywords : existing.keywords,
+      category: category || existing.category,
+      volume: volume || existing.volume,
+      issue: issue || existing.issue,
+      pages: pages || existing.pages,
+      doi: doi || existing.doi,
+      abstract: abstract || existing.abstract
+    };
+
+    // Process new HTML file if uploaded
+    if (req.files && req.files.htmlFile) {
+      const htmlFile = req.files.htmlFile[0];
+      const htmlContent = htmlFile.buffer.toString('utf8');
+      const htmlFilename = generateFilename('htmlFile', htmlFile.originalname);
+      await db.saveFile(htmlFilename, htmlFile.mimetype, htmlFile.buffer);
+      updatedFields.fullText = htmlContent;
+    }
+
+    // Process new PDF file if uploaded
+    if (req.files && req.files.pdfFile) {
+      const pdfFile = req.files.pdfFile[0];
+      const pdfFilename = generateFilename('pdfFile', pdfFile.originalname);
+      await db.saveFile(pdfFilename, pdfFile.mimetype, pdfFile.buffer);
+      updatedFields.pdfUrl = `/uploads/${pdfFilename}`;
+
+      // Delete old PDF file if it exists
+      if (existing.pdfUrl && existing.pdfUrl.startsWith('/uploads/')) {
+        const filename = existing.pdfUrl.replace('/uploads/', '');
+        await db.deleteFile(filename);
+      }
+    }
+
+    const updatedArticle = await db.updateArticle(articleId, updatedFields);
+    res.json(updatedArticle);
+  } catch (err) {
+    console.error('Error updating article:', err);
+    res.status(500).json({ error: err.message || 'Failed to update article' });
+  }
+});
+
+
 // 4. Get all submitted manuscripts
 app.get('/api/submissions', async (req, res) => {
   try {

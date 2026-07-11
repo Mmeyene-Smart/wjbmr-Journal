@@ -38,9 +38,10 @@ function TabBtn({ active, onClick, children }) {
 /* ─────────────────────────────────────────────────────────────────────────────
    MAIN COMPONENT
 ───────────────────────────────────────────────────────────────────────────── */
-export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], onDeleteArticle }) {
+export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], onDeleteArticle, onUpdateArticle }) {
   const [activeTab, setActiveTab] = useState('publish');
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [editingArticle, setEditingArticle] = useState(null);
 
   /* ── Publish form state ── */
   const [formData, setFormData] = useState({
@@ -297,6 +298,44 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
   };
 
   /* ── Publish form validation + submit ── */
+  const handleStartEdit = (art) => {
+    setEditingArticle(art);
+    setFormData({
+      title: art.title || '',
+      authors: typeof art.authors === 'string' ? art.authors : (art.authors?.map(a => a.name).join(', ') || ''),
+      affiliations: art.affiliations || '',
+      correspondingAuthor: art.correspondingAuthor || '',
+      keywords: art.keywords || '',
+      category: art.category || 'ORIGINAL RESEARCH',
+      volume: art.volume || '',
+      issue: art.issue || '',
+      pages: art.pages || '',
+      doi: art.doi || '',
+      abstract: art.abstract || '',
+      date: art.date || ''
+    });
+    setHtmlContent(art.fullText || '');
+    setHtmlFileName('edited_article.html');
+    setShowHtmlEditor(true);
+    setPdfFile(null);
+    setPdfFileName(art.pdfUrl ? '[Existing PDF kept]' : '');
+    setActiveTab('publish');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingArticle(null);
+    setFormData({
+      title: '', authors: '', affiliations: '', correspondingAuthor: '',
+      keywords: '', category: 'ORIGINAL RESEARCH', volume: 'Volume 12 (2026)',
+      issue: 'Issue 2 (June 2026)', pages: '', doi: '', abstract: '',
+      date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    });
+    setHtmlFile(null); setHtmlContent(''); setHtmlFileName(''); setShowHtmlEditor(false);
+    setPdfFile(null); setPdfFileName('');
+    setActiveTab('published');
+  };
+
   const validateForm = () => {
     const newErrors = {};
     if (!formData.title.trim()) newErrors.title = 'Manuscript title is required';
@@ -308,7 +347,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
     if (!formData.pages.trim()) newErrors.pages = 'Page range is required (e.g. 139 - 148)';
     if (!formData.doi.trim()) newErrors.doi = 'DOI is required';
     if (!htmlContent.trim()) newErrors.htmlFile = 'HTML content is required';
-    if (!pdfFile) newErrors.pdfFile = 'PDF file upload is required';
+    if (!editingArticle && !pdfFile) newErrors.pdfFile = 'PDF file upload is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -335,21 +374,34 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
     postData.append('doi', formData.doi);
     postData.append('abstract', formData.abstract);
     postData.append('htmlFile', htmlFileToSend);
-    postData.append('pdfFile', pdfFile);
+    if (pdfFile) {
+      postData.append('pdfFile', pdfFile);
+    }
 
-    fetch(`${API_BASE}/api/articles`, { method: 'POST', body: postData })
-      .then(res => res.ok ? res.json() : res.json().then(d => Promise.reject(d.error || 'Failed to publish')))
-      .then(newArticle => {
-        onAddArticle(newArticle);
-        setSuccess(true);
-        setFormData({
-          title: '', authors: '', affiliations: '', correspondingAuthor: '',
-          keywords: '', category: 'ORIGINAL RESEARCH', volume: 'Volume 12 (2026)',
-          issue: 'Issue 2 (June 2026)', pages: '', doi: '', abstract: '',
-          date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-        });
-        setHtmlFile(null); setHtmlContent(''); setHtmlFileName(''); setShowHtmlEditor(false);
-        setPdfFile(null); setPdfFileName('');
+    const url = editingArticle 
+      ? `${API_BASE}/api/articles/${editingArticle.id}`
+      : `${API_BASE}/api/articles`;
+    const method = editingArticle ? 'PUT' : 'POST';
+
+    fetch(url, { method: method, body: postData })
+      .then(res => res.ok ? res.json() : res.json().then(d => Promise.reject(d.error || 'Failed to save article')))
+      .then(savedArticle => {
+        if (editingArticle) {
+          onUpdateArticle(savedArticle);
+          setSuccess(true);
+          handleCancelEdit();
+        } else {
+          onAddArticle(savedArticle);
+          setSuccess(true);
+          setFormData({
+            title: '', authors: '', affiliations: '', correspondingAuthor: '',
+            keywords: '', category: 'ORIGINAL RESEARCH', volume: 'Volume 12 (2026)',
+            issue: 'Issue 2 (June 2026)', pages: '', doi: '', abstract: '',
+            date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+          });
+          setHtmlFile(null); setHtmlContent(''); setHtmlFileName(''); setShowHtmlEditor(false);
+          setPdfFile(null); setPdfFileName('');
+        }
         setTimeout(() => setSuccess(false), 5000);
       })
       .catch(err => setErrors(prev => ({ ...prev, submit: err || 'Failed to submit article' })))
@@ -446,7 +498,9 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
 
           {/* Left: Form */}
           <div className="glass-card">
-            <h3 style={{ fontSize: '20px', marginBottom: '24px', color: 'var(--primary-dark)' }}>Publish New Article</h3>
+            <h3 style={{ fontSize: '20px', marginBottom: '24px', color: 'var(--primary-dark)' }}>
+              {editingArticle ? `Edit Article: ${editingArticle.title.substring(0, 40)}...` : 'Publish New Article'}
+            </h3>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
@@ -553,13 +607,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
                 </div>
                 <div className="form-group">
                   <label className="form-label">Volume *</label>
-                  <select name="volume" value={formData.volume} onChange={handleInputChange} className="form-select" disabled={isSubmitting}>
-                    <option value="Volume 12 (2026)">Volume 12 (2026)</option>
-                    <option value="Volume 11 (2025)">Volume 11 (2025)</option>
-                    <option value="Volume 10 (2024)">Volume 10 (2024)</option>
-                    <option value="Volume 7 (2025)">Volume 7 (2025)</option>
-                    <option value="Volume 6 (2024)">Volume 6 (2024)</option>
-                  </select>
+                  <input type="text" name="volume" value={formData.volume} onChange={handleInputChange} placeholder="e.g. Volume 12 (2026)" className="form-input" disabled={isSubmitting} />
                 </div>
               </div>
 
@@ -567,16 +615,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
                 <div className="form-group">
                   <label className="form-label">Issue *</label>
-                  <select name="issue" value={formData.issue} onChange={handleInputChange} className="form-select" disabled={isSubmitting}>
-                    <option value="Issue 2 (June 2026)">Issue 2 (June)</option>
-                    <option value="Issue 1 (March 2026)">Issue 1 (March)</option>
-                    <option value="Issue 4 (December 2025)">Issue 4 (December)</option>
-                    <option value="Issue 3 (September 2025)">Issue 3 (September)</option>
-                    <option value="Issue 2 (June 2025)">Issue 2 (June)</option>
-                    <option value="Issue 1 (March 2025)">Issue 1 (March)</option>
-                    <option value="Issue 1 (2025)">Issue 1 (2025)</option>
-                    <option value="Issue 1 (2024)">Issue 1 (2024)</option>
-                  </select>
+                  <input type="text" name="issue" value={formData.issue} onChange={handleInputChange} placeholder="e.g. Issue 2 (June 2026)" className="form-input" disabled={isSubmitting} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Page Range *</label>
@@ -719,9 +758,20 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
                 </div>
               )}
 
-              <button type="submit" className="submit-form-btn" style={{ marginTop: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }} disabled={isSubmitting}>
-                {isSubmitting ? <><RefreshCw size={16} className="animate-spin" /> Publishing...</> : 'Publish Article Live'}
-              </button>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                <button type="submit" className="submit-form-btn" style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }} disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <><RefreshCw size={16} className="animate-spin" /> {editingArticle ? 'Updating...' : 'Publishing...'}</>
+                  ) : (
+                    editingArticle ? 'Save & Update Article' : 'Publish Article Live'
+                  )}
+                </button>
+                {editingArticle && (
+                  <button type="button" onClick={handleCancelEdit} className="submit-btn" style={{ borderColor: 'var(--border-color)', color: 'var(--text-muted)' }} disabled={isSubmitting}>
+                    Cancel Edit
+                  </button>
+                )}
+              </div>
 
             </form>
           </div>
@@ -1064,27 +1114,50 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
                         </div>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => setDeleteConfirmId(art.id)}
-                        style={{
-                          padding: '7px 16px',
-                          background: 'none',
-                          color: '#dc2626',
-                          border: '1px solid #fca5a5',
-                          borderRadius: '6px',
-                          fontWeight: '700',
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
-                      >
-                        <Trash2 size={13} /> Delete
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => handleStartEdit(art)}
+                          style={{
+                            padding: '7px 16px',
+                            background: 'none',
+                            color: 'var(--primary-color)',
+                            border: '1px solid var(--primary-color)',
+                            borderRadius: '6px',
+                            fontWeight: '700',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = 'var(--primary-light)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+                        >
+                          <PenSquare size={13} /> Edit
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirmId(art.id)}
+                          style={{
+                            padding: '7px 16px',
+                            background: 'none',
+                            color: '#dc2626',
+                            border: '1px solid #fca5a5',
+                            borderRadius: '6px',
+                            fontWeight: '700',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+                        >
+                          <Trash2 size={13} /> Delete
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
