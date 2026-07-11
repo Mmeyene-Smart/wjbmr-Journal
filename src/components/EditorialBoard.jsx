@@ -170,12 +170,7 @@ export default function EditorialBoard() {
         <div>
           <h3 className="section-title">Board Directory</h3>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-            gap: '24px',
-            marginTop: '24px'
-          }}>
+          <div className="editorial-grid">
             {EDITORIAL_MEMBERS.map((member, idx) => (
               <div
                 key={idx}
