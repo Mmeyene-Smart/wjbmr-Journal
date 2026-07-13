@@ -6,12 +6,14 @@ export default function About() {
     <div className="container">
       <div className="about-grid">
         {/* Left Column (Reference 2 Left Side) */}
-        <div className="about-left-col">
-          <h1 className="about-journal-title">
-            World Journal of<br />
-            Biomedical Research
-          </h1>
-          <div className="about-journal-divider"></div>
+        <div className="about-left-col" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div>
+            <h1 className="about-journal-title">
+              World Journal of<br />
+              Biomedical Research
+            </h1>
+            <div className="about-journal-divider"></div>
+          </div>
           
           {/* Journal Cover Image — fills the box properly without cropping */}
           <div className="about-circle-frame" style={{ 
@@ -27,7 +29,7 @@ export default function About() {
             display: 'block'
           }}>
             <img 
-              src="/wjbm-new-about.jpeg" 
+              src="/wjbm-about-new.jpeg" 
               alt="World Journal of Biomedical Research Cover" 
               className="about-circle-img"
               style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 'var(--radius-md)' }}
@@ -36,26 +38,9 @@ export default function About() {
               }}
             />
           </div>
-        </div>
-
-
-        {/* Right Column (Reference 2 Right Side) */}
-        <div className="about-right-col">
-          {/* Main Journal Description */}
-          <div className="info-section">
-            <h2 className="info-section-title">
-              WORLD JOURNAL OF BIOMEDICAL RESEARCH (WJBMR)
-            </h2>
-            <p className="info-section-body text-block">
-              is published by the <strong>College of Health Sciences, University of Uyo, Uyo, Nigeria</strong>. The purpose of the Journal is to publish papers on all aspects of medicine, dental sciences, anatomy, physiology, pharmacology, biochemistry, pathology, microbiology, community health, and allied health sciences.
-            </p>
-            <p className="info-section-body text-block">
-              The focus is to bring to the scientific, academic, and policy-making communities, as well as the reading public, empirical information on current scientific breakthroughs, clinical studies, medical reviews, technologies, policies, and health system innovations. This is to contribute to the global and regional search for solutions to human health challenges and tropical diseases.
-            </p>
-          </div>
 
           {/* Subscription Section */}
-          <div className="info-section">
+          <div className="info-section" style={{ width: '100%', textAlign: 'left' }}>
             <h2 className="info-section-title">Subscription</h2>
             <div className="info-section-body glass-card" style={{ padding: '20px', margin: 0, borderLeft: '4px solid var(--primary-color)' }}>
               <p className="text-block" style={{ margin: 0 }}>
@@ -78,6 +63,23 @@ export default function About() {
               </p>
             </div>
           </div>
+        </div>
+
+
+        {/* Right Column (Reference 2 Right Side) */}
+        <div className="about-right-col">
+          {/* Main Journal Description */}
+          <div className="info-section">
+            <h2 className="info-section-title">
+              WORLD JOURNAL OF BIOMEDICAL RESEARCH (WJBMR)
+            </h2>
+            <p className="info-section-body text-block">
+              is published by the <strong>College of Health Sciences, University of Uyo, Uyo, Nigeria</strong>. The purpose of the Journal is to publish papers on all aspects of medicine, dental sciences, anatomy, physiology, pharmacology, biochemistry, pathology, microbiology, community health, and allied health sciences.
+            </p>
+            <p className="info-section-body text-block">
+              The focus is to bring to the scientific, academic, and policy-making communities, as well as the reading public, empirical information on current scientific breakthroughs, clinical studies, medical reviews, technologies, policies, and health system innovations. This is to contribute to the global and regional search for solutions to human health challenges and tropical diseases.
+            </p>
+          </div>
 
           {/* Publication Schedule Section */}
           <div className="info-section">
@@ -98,7 +100,7 @@ export default function About() {
               <div>
                 <span style={{ fontSize: '13px', color: 'var(--primary-dark)', fontWeight: '700', textTransform: 'uppercase' }}>Article Processing Charges (APC):</span>
                 <p style={{ fontSize: '15px', color: 'var(--text-dark)', fontWeight: '600' }}>
-                  Only Publication Fee (₦25,000) or its equivalent in other currencies is charged upon the official acceptance of an article. No submission fees apply.
+                  Only Publication Fee (₦60,000) or its equivalent in other currencies is charged upon the official acceptance of an article. No submission fees apply.
                 </p>
               </div>
             </div>

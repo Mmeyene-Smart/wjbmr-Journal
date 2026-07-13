@@ -75,7 +75,7 @@ export default function Current({ articles = [], onNavigateToArticle }) {
       <div style={{ marginBottom: '32px' }}>
         <h2 className="section-title">Current Issue</h2>
         <p style={{ color: 'var(--text-muted)' }}>
-          Browse WJBMR Volume 12, Issue 2, June 2026 table of contents.
+          Browse WJBMR Volume 12 NO 2, Issue 2, June 2025 table of contents.
         </p>
       </div>
 
@@ -281,7 +281,7 @@ export default function Current({ articles = [], onNavigateToArticle }) {
               <div style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '1px' }}>WJBMR COVER</div>
               <div style={{ fontSize: '28px', fontWeight: '800', fontFamily: 'var(--font-display)', margin: '8px 0 4px 0' }}>Vol. 12</div>
               <div style={{ fontSize: '15px', fontWeight: '600' }}>Issue 2</div>
-              <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '8px' }}>June 2026</div>
+              <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '8px' }}>June 2025</div>
             </div>
 
             <div>
@@ -289,12 +289,12 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                 World Journal of Biomedical Research (WJBMR)
               </h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                <span><strong>Release:</strong> June 2026</span>
+                <span><strong>Release:</strong> June 2025</span>
                 <span><strong>Indexed:</strong> AIM, AJOL, CrossRef</span>
               </div>
-              <p className="text-block" style={{ fontSize: '13px', margin: 0 }}>
+              {/* <p className="text-block" style={{ fontSize: '13px', margin: 0 }}>
                 Filter publications using the sidebar search tools. Access full-text abstracts or read directly in the HTML frames below.
-              </p>
+              </p> */}
             </div>
           </div>
 
