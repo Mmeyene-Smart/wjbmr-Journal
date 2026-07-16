@@ -75,7 +75,7 @@ export default function Current({ articles = [], onNavigateToArticle }) {
       <div style={{ marginBottom: '32px' }}>
         <h2 className="section-title">Current Issue</h2>
         <p style={{ color: 'var(--text-muted)' }}>
-          Browse WJBMR Volume 12 NO 2, Issue 2, June 2025 table of contents.
+          Browse WJBMR issue 2 September 2025 volume 12 no. 2 table of contents.
         </p>
       </div>
 
