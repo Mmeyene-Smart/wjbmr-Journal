@@ -279,9 +279,9 @@ export default function Current({ articles = [], onNavigateToArticle }) {
               height: '180px'
             }}>
               <div style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '1px' }}>WJBMR COVER</div>
-              <div style={{ fontSize: '28px', fontWeight: '800', fontFamily: 'var(--font-display)', margin: '8px 0 4px 0' }}>Vol. 12</div>
-              <div style={{ fontSize: '15px', fontWeight: '600' }}>Issue 2</div>
-              <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '8px' }}>June 2025</div>
+              <div style={{ fontSize: '28px', fontWeight: '800', fontFamily: 'var(--font-display)', margin: '8px 0 4px 0' }}>Vol. 13</div>
+              <div style={{ fontSize: '15px', fontWeight: '600' }}>Issue 1</div>
+              <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '8px' }}>August 2026</div>
             </div>
 
             <div>
@@ -289,7 +289,7 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                 World Journal of Biomedical Research (WJBMR)
               </h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                <span><strong>Release:</strong> June 2025</span>
+                <span><strong>Release:</strong> August 2026</span>
                 <span><strong>Indexed:</strong> AIM, AJOL, CrossRef</span>
               </div>
               {/* <p className="text-block" style={{ fontSize: '13px', margin: 0 }}>
