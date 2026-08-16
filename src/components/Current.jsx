@@ -289,7 +289,11 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                 World Journal of Biomedical Research (WJBMR)
               </h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+<<<<<<< HEAD
                 <span><strong>Release:</strong> June 2026</span>
+=======
+                <span><strong>Release:</strong> August 2026</span>
+>>>>>>> 885f1784078591544765de6d55c8953273ee8828
                 <span><strong>Indexed:</strong> AIM, AJOL, CrossRef</span>
               </div>
               {/* <p className="text-block" style={{ fontSize: '13px', margin: 0 }}>
