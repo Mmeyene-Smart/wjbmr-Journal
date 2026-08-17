@@ -32,11 +32,10 @@ process.log
 out.txt
 mongodb_export/
 
-# Data and uploaded files
+# Data temporary database files
 data/*.db
 data/*.db-shm
 data/*.db-wal
-data/uploads/
 
 # Zip deployment files
 *.zip
