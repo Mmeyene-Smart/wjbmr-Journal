@@ -1,21 +1,25 @@
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import mongoose from 'mongoose';
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const dataDir = path.join(__dirname, '..', 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+const uploadsDir = path.join(dataDir, 'uploads');
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-const jsonDbPath = path.join(dataDir, 'journal-db.json');
-
-// ─── JSON fallback (used when MONGODB_URI is not set) ────────────────────────
+// ─── Initialize Firebase Admin ───────────────────────────────────────────────
+let db = null;
 let useJsonDb = false;
-let jsonData = { articles: [], submissions: [], images: [] };
+let jsonData = { articles: [], submissions: [], images: [], archives: [] };
+
+const jsonDbPath = path.join(dataDir, 'journal-db.json');
 
 function saveJsonDb() {
   try {
@@ -25,98 +29,42 @@ function saveJsonDb() {
   }
 }
 
-// ─── Mongoose Schemas ────────────────────────────────────────────────────────
-const articleSchema = new mongoose.Schema({
-  id:                 { type: Number, required: true, unique: true },
-  category:           { type: String, required: true },
-  title:              { type: String, required: true },
-  authors:            { type: mongoose.Schema.Types.Mixed, required: true }, // string or array
-  date:               { type: String, required: true },
-  readTime:           { type: String, required: true },
-  pdfUrl:             { type: String, required: true },
-  chartType:          { type: String, required: true },
-  chartData:          { type: [Number], required: true },
-  doi:                { type: String, default: '' },
-  pages:              { type: String, default: '' },
-  volume:             { type: String, default: '' },
-  issue:              { type: String, default: '' },
-  abstract:           { type: String, default: '' },
-  fullText:           { type: String, default: '' },
-  isHtmlArticle:      { type: Boolean, default: true },
-  affiliations:       { type: String, default: '' },
-  correspondingAuthor:{ type: String, default: '' },
-  keywords:           { type: String, default: '' },
-}); // use default _id generation, keep custom numeric id field for lookups
+function findServiceAccountKey() {
+  const rootDir = path.join(__dirname, '..');
+  const files = fs.readdirSync(rootDir);
+  const found = files.find(f => f.includes('firebase-adminsdk') || f === 'serviceAccountKey.json');
+  if (found) {
+    return path.join(rootDir, found);
+  }
+  return null;
+}
 
-const submissionSchema = new mongoose.Schema({
-  title:          { type: String, required: true },
-  abstract:       { type: String, required: true },
-  category:       { type: String, required: true },
-  authorName:     { type: String, required: true },
-  authorEmail:    { type: String, required: true },
-  affiliation:    { type: String, required: true },
-  coAuthors:      { type: String, default: '' },
-  manuscriptFile: { type: String, required: true },
-  coverLetterFile:{ type: String, default: null },
-  submittedAt:    { type: String, required: true },
-});
-
-const imageSchema = new mongoose.Schema({
-  filename:   { type: String, required: true },
-  url:        { type: String, required: true },
-  uploadedAt: { type: String, required: true },
-});
-
-const fileSchema = new mongoose.Schema({
-  filename:    { type: String, required: true, unique: true },
-  contentType: { type: String, required: true },
-  data:        { type: Buffer, required: true },
-  uploadedAt:  { type: Date, default: Date.now }
-});
-
-const archiveSchema = new mongoose.Schema({
-  title:      { type: String, required: true },
-  volume:     { type: String, required: true },
-  issue:      { type: String, required: true },
-  pdfUrl:     { type: String, required: true },
-  uploadedAt: { type: String, required: true },
-});
-
-
-// ─── Connect to MongoDB ──────────────────────────────────────────────────────
-const MONGODB_URI = process.env.MONGODB_URI;
-
-let Article, Submission, Image, FileModel, Archive;
-
-if (MONGODB_URI) {
-  try {
-    await mongoose.connect(MONGODB_URI);
-    console.log('Connected to MongoDB Atlas.');
-
-    Article    = mongoose.model('Article',    articleSchema);
-    Submission = mongoose.model('Submission', submissionSchema);
-    Image      = mongoose.model('Image',      imageSchema);
-    FileModel  = mongoose.model('File',       fileSchema);
-    Archive    = mongoose.model('Archive',    archiveSchema);
-  } catch (err) {
-    console.error('Failed to connect to MongoDB — falling back to JSON db:', err.message);
+try {
+  const serviceAccountPath = findServiceAccountKey();
+  if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
+    const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+    initializeApp({
+      credential: cert(serviceAccount)
+    });
+    db = getFirestore();
+    console.log(`Connected to Firebase Firestore successfully using ${path.basename(serviceAccountPath)}.`);
+  } else {
+    console.warn('Firebase serviceAccountKey not found. Falling back to local JSON database.');
     useJsonDb = true;
   }
-} else {
-  console.warn('MONGODB_URI not set. Using local JSON database (not suitable for production).');
+} catch (err) {
+  console.error('Failed to initialize Firebase Admin — falling back to JSON db:', err.message);
   useJsonDb = true;
 }
 
-// Load JSON fallback from disk
+// Load JSON fallback from disk if needed
 if (useJsonDb) {
   if (fs.existsSync(jsonDbPath)) {
     try {
       jsonData = JSON.parse(fs.readFileSync(jsonDbPath, 'utf8'));
-      if (!jsonData.archives) {
-        jsonData.archives = [];
-      }
+      if (!jsonData.archives) jsonData.archives = [];
     } catch (e) {
-      console.error('Error parsing journal-db.json, starting empty:', e);
+      console.error('Error parsing journal-db.json:', e);
       jsonData = { articles: [], submissions: [], images: [], archives: [] };
     }
   } else {
@@ -125,73 +73,99 @@ if (useJsonDb) {
   }
 }
 
-// ─── Helper: strip MongoDB internals from returned objects ──────────────────
-function cleanArticle(doc) {
-  if (!doc) return null;
-  const obj = doc.toObject ? doc.toObject() : { ...doc };
-  delete obj.__v;
-  delete obj._id;
-  return obj;
-}
-
-function cleanDoc(doc) {
-  if (!doc) return null;
-  const obj = doc.toObject ? doc.toObject() : { ...doc };
-  const id = obj._id?.toString() || obj.id;
-  delete obj.__v;
-  delete obj._id;
-  return { id: parseInt(id), ...obj };
-}
-
-// ─── Exported async DB functions ─────────────────────────────────────────────
+// ─── ARTICLES ────────────────────────────────────────────────────────────────
 
 export async function getArticles() {
   if (useJsonDb) {
     return [...jsonData.articles].sort((a, b) => b.id - a.id);
   }
-  const docs = await Article.find().sort({ id: -1 }).lean();
-  return docs.map(d => { delete d.__v; delete d._id; return d; });
+  try {
+    const snapshot = await db.collection('articles').get();
+    const articles = [];
+    snapshot.forEach(doc => {
+      articles.push({ ...doc.data() });
+    });
+    return articles.sort((a, b) => (b.id || 0) - (a.id || 0));
+  } catch (err) {
+    console.error('Error in getArticles:', err);
+    return [];
+  }
 }
 
 export async function getArticleById(id) {
+  const targetId = parseInt(id);
   if (useJsonDb) {
-    const article = jsonData.articles.find(art => art.id === parseInt(id));
+    const article = jsonData.articles.find(art => art.id === targetId);
     return article ? { ...article } : null;
   }
-  const doc = await Article.findOne({ id: parseInt(id) }).lean();
-  if (!doc) return null;
-  delete doc.__v;
-  delete doc._id;
-  return doc;
+  try {
+    // Check by document ID or numeric id property
+    const docRef = db.collection('articles').doc(targetId.toString());
+    const docSnap = await docRef.get();
+    if (docSnap.exists) {
+      return { ...docSnap.data() };
+    }
+    const querySnap = await db.collection('articles').where('id', '==', targetId).limit(1).get();
+    if (!querySnap.empty) {
+      return { ...querySnap.docs[0].data() };
+    }
+    return null;
+  } catch (err) {
+    console.error('Error in getArticleById:', err);
+    return null;
+  }
 }
 
 export async function addArticle(article) {
+  const newId = article.id || Date.now();
+  const newArt = { ...article, id: newId, isHtmlArticle: !!article.isHtmlArticle };
+
   if (useJsonDb) {
-    const newArt = { ...article, id: article.id || Date.now(), isHtmlArticle: !!article.isHtmlArticle };
     jsonData.articles.push(newArt);
     saveJsonDb();
     return newArt;
   }
-  const doc = new Article({ ...article, id: article.id || Date.now() });
-  await doc.save();
-  return getArticleById(article.id);
+  try {
+    await db.collection('articles').doc(newId.toString()).set(newArt, { merge: true });
+    return newArt;
+  } catch (err) {
+    console.error('Error in addArticle:', err);
+    throw err;
+  }
 }
 
 export async function deleteArticle(id) {
+  const targetId = parseInt(id);
   if (useJsonDb) {
-    const targetId = parseInt(id);
     const before = jsonData.articles.length;
     jsonData.articles = jsonData.articles.filter(art => art.id !== targetId);
     if (jsonData.articles.length < before) { saveJsonDb(); return true; }
     return false;
   }
-  const result = await Article.deleteOne({ id: parseInt(id) });
-  return result.deletedCount > 0;
+  try {
+    const docRef = db.collection('articles').doc(targetId.toString());
+    const docSnap = await docRef.get();
+    if (docSnap.exists) {
+      await docRef.delete();
+      return true;
+    }
+    const querySnap = await db.collection('articles').where('id', '==', targetId).get();
+    if (!querySnap.empty) {
+      for (const d of querySnap.docs) {
+        await d.ref.delete();
+      }
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error('Error in deleteArticle:', err);
+    return false;
+  }
 }
 
 export async function updateArticle(id, updatedFields) {
+  const targetId = parseInt(id);
   if (useJsonDb) {
-    const targetId = parseInt(id);
     const index = jsonData.articles.findIndex(art => art.id === targetId);
     if (index !== -1) {
       jsonData.articles[index] = { ...jsonData.articles[index], ...updatedFields };
@@ -200,29 +174,46 @@ export async function updateArticle(id, updatedFields) {
     }
     return null;
   }
-  const result = await Article.findOneAndUpdate(
-    { id: parseInt(id) },
-    { $set: updatedFields },
-    { new: true }
-  ).lean();
-  if (result) {
-    delete result.__v;
-    delete result._id;
+  try {
+    const docRef = db.collection('articles').doc(targetId.toString());
+    const docSnap = await docRef.get();
+    if (docSnap.exists) {
+      await docRef.update(updatedFields);
+      const updated = await docRef.get();
+      return { ...updated.data() };
+    }
+    const querySnap = await db.collection('articles').where('id', '==', targetId).limit(1).get();
+    if (!querySnap.empty) {
+      const matchDoc = querySnap.docs[0];
+      await matchDoc.ref.update(updatedFields);
+      const updated = await matchDoc.ref.get();
+      return { ...updated.data() };
+    }
+    return null;
+  } catch (err) {
+    console.error('Error in updateArticle:', err);
+    return null;
   }
-  return result;
 }
 
 
+// ─── SUBMISSIONS ─────────────────────────────────────────────────────────────
+
 export async function getSubmissions() {
   if (useJsonDb) {
-    return [...jsonData.submissions].sort((a, b) => b.id - a.id);
+    return [...jsonData.submissions].sort((a, b) => (b.id || 0) - (a.id || 0));
   }
-  const docs = await Submission.find().sort({ _id: -1 }).lean();
-  return docs.map(d => {
-    const id = d._id.toString();
-    delete d.__v; delete d._id;
-    return { id, ...d };
-  });
+  try {
+    const snapshot = await db.collection('submissions').get();
+    const subs = [];
+    snapshot.forEach(doc => {
+      subs.push({ id: doc.id, ...doc.data() });
+    });
+    return subs.sort((a, b) => String(b.submittedAt || '').localeCompare(String(a.submittedAt || '')));
+  } catch (err) {
+    console.error('Error in getSubmissions:', err);
+    return [];
+  }
 }
 
 export async function addSubmission(sub) {
@@ -233,10 +224,15 @@ export async function addSubmission(sub) {
     saveJsonDb();
     return newSub;
   }
-  const doc = new Submission(sub);
-  await doc.save();
-  const id = doc._id.toString();
-  return { id, ...sub };
+  try {
+    const docRef = db.collection('submissions').doc();
+    const newSub = { id: docRef.id, ...sub };
+    await docRef.set(newSub);
+    return newSub;
+  } catch (err) {
+    console.error('Error in addSubmission:', err);
+    throw err;
+  }
 }
 
 export async function deleteSubmission(id) {
@@ -247,26 +243,34 @@ export async function deleteSubmission(id) {
     if (jsonData.submissions.length < before) { saveJsonDb(); return true; }
     return false;
   }
-  // id could be a MongoDB ObjectId string or a numeric string
-  let result;
   try {
-    result = await Submission.deleteOne({ _id: new mongoose.Types.ObjectId(id) });
-  } catch {
-    result = { deletedCount: 0 };
+    const docRef = db.collection('submissions').doc(id.toString());
+    await docRef.delete();
+    return true;
+  } catch (err) {
+    console.error('Error in deleteSubmission:', err);
+    return false;
   }
-  return result.deletedCount > 0;
 }
+
+
+// ─── IMAGES ──────────────────────────────────────────────────────────────────
 
 export async function getImages() {
   if (useJsonDb) {
-    return [...jsonData.images].sort((a, b) => b.id - a.id);
+    return [...jsonData.images].sort((a, b) => (b.id || 0) - (a.id || 0));
   }
-  const docs = await Image.find().sort({ _id: -1 }).lean();
-  return docs.map(d => {
-    const id = d._id.toString();
-    delete d.__v; delete d._id;
-    return { id, ...d };
-  });
+  try {
+    const snapshot = await db.collection('images').get();
+    const imgs = [];
+    snapshot.forEach(doc => {
+      imgs.push({ id: doc.id, ...doc.data() });
+    });
+    return imgs.sort((a, b) => String(b.uploadedAt || '').localeCompare(String(a.uploadedAt || '')));
+  } catch (err) {
+    console.error('Error in getImages:', err);
+    return [];
+  }
 }
 
 export async function addImage(img) {
@@ -277,10 +281,15 @@ export async function addImage(img) {
     saveJsonDb();
     return newImg;
   }
-  const doc = new Image(img);
-  await doc.save();
-  const id = doc._id.toString();
-  return { id, ...img };
+  try {
+    const docRef = db.collection('images').doc();
+    const newImg = { id: docRef.id, ...img };
+    await docRef.set(newImg);
+    return newImg;
+  } catch (err) {
+    console.error('Error in addImage:', err);
+    throw err;
+  }
 }
 
 export async function deleteImage(id) {
@@ -291,70 +300,98 @@ export async function deleteImage(id) {
     if (jsonData.images.length < before) { saveJsonDb(); return true; }
     return false;
   }
-  let result;
   try {
-    result = await Image.deleteOne({ _id: new mongoose.Types.ObjectId(id) });
-  } catch {
-    result = { deletedCount: 0 };
+    const docRef = db.collection('images').doc(id.toString());
+    await docRef.delete();
+    return true;
+  } catch (err) {
+    console.error('Error in deleteImage:', err);
+    return false;
   }
-  return result.deletedCount > 0;
 }
 
+
+// ─── FILE STORAGE ────────────────────────────────────────────────────────────
+
 export async function saveFile(filename, contentType, buffer) {
-  if (useJsonDb) {
-    const dest = path.join(dataDir, 'uploads', filename);
-    fs.writeFileSync(dest, buffer);
-    return;
+  const dest = path.join(uploadsDir, filename);
+  fs.writeFileSync(dest, buffer);
+
+  if (!useJsonDb && db) {
+    try {
+      await db.collection('files').doc(filename).set({
+        filename,
+        contentType,
+        uploadedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (err) {
+      console.warn('Failed to save file metadata to Firestore:', err.message);
+    }
   }
-  const doc = new FileModel({ filename, contentType, data: buffer });
-  await doc.save();
 }
 
 export async function getFile(filename) {
-  if (useJsonDb) {
-    const dest = path.join(dataDir, 'uploads', filename);
-    if (fs.existsSync(dest)) {
-      const data = fs.readFileSync(dest);
-      let contentType = 'application/octet-stream';
-      const ext = path.extname(filename).toLowerCase();
-      if (ext === '.pdf') contentType = 'application/pdf';
-      else if (ext === '.html') contentType = 'text/html';
-      else if (ext === '.png') contentType = 'image/png';
-      else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
-      else if (ext === '.gif') contentType = 'image/gif';
-      else if (ext === '.svg') contentType = 'image/svg+xml';
-      else if (ext === '.webp') contentType = 'image/webp';
-      return { data, contentType };
+  const dest = path.join(uploadsDir, filename);
+  if (fs.existsSync(dest)) {
+    const data = fs.readFileSync(dest);
+    let contentType = 'application/octet-stream';
+    const ext = path.extname(filename).toLowerCase();
+    if (ext === '.pdf') contentType = 'application/pdf';
+    else if (ext === '.html') contentType = 'text/html';
+    else if (ext === '.png') contentType = 'image/png';
+    else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+    else if (ext === '.gif') contentType = 'image/gif';
+    else if (ext === '.svg') contentType = 'image/svg+xml';
+    else if (ext === '.webp') contentType = 'image/webp';
+    
+    // Check if contentType is saved in metadata
+    if (!useJsonDb && db) {
+      try {
+        const docSnap = await db.collection('files').doc(filename).get();
+        if (docSnap.exists && docSnap.data().contentType) {
+          contentType = docSnap.data().contentType;
+        }
+      } catch (e) {}
     }
-    return null;
+    
+    return { data, contentType };
   }
-  const doc = await FileModel.findOne({ filename }).lean();
-  if (!doc) return null;
-  return { data: doc.data.buffer || doc.data, contentType: doc.contentType };
+  return null;
 }
 
 export async function deleteFile(filename) {
-  if (useJsonDb) {
-    const dest = path.join(dataDir, 'uploads', filename);
-    if (fs.existsSync(dest)) {
-      try { fs.unlinkSync(dest); } catch {}
-    }
-    return true;
+  const dest = path.join(uploadsDir, filename);
+  if (fs.existsSync(dest)) {
+    try { fs.unlinkSync(dest); } catch {}
   }
-  const result = await FileModel.deleteOne({ filename });
-  return result.deletedCount > 0;
+  if (!useJsonDb && db) {
+    try {
+      await db.collection('files').doc(filename).delete();
+    } catch (err) {
+      console.warn('Failed to delete file metadata from Firestore:', err.message);
+    }
+  }
+  return true;
 }
+
+
+// ─── ARCHIVES ────────────────────────────────────────────────────────────────
 
 export async function getArchives() {
   if (useJsonDb) {
-    return [...(jsonData.archives || [])].sort((a, b) => b.id - a.id);
+    return [...(jsonData.archives || [])].sort((a, b) => (b.id || 0) - (a.id || 0));
   }
-  const docs = await Archive.find().sort({ _id: -1 }).lean();
-  return docs.map(d => {
-    const id = d._id.toString();
-    delete d.__v; delete d._id;
-    return { id, ...d };
-  });
+  try {
+    const snapshot = await db.collection('archives').get();
+    const archives = [];
+    snapshot.forEach(doc => {
+      archives.push({ id: doc.id, ...doc.data() });
+    });
+    return archives.sort((a, b) => String(b.uploadedAt || '').localeCompare(String(a.uploadedAt || '')));
+  } catch (err) {
+    console.error('Error in getArchives:', err);
+    return [];
+  }
 }
 
 export async function addArchive(archive) {
@@ -366,10 +403,15 @@ export async function addArchive(archive) {
     saveJsonDb();
     return newArch;
   }
-  const doc = new Archive(archive);
-  await doc.save();
-  const id = doc._id.toString();
-  return { id, ...archive };
+  try {
+    const docRef = db.collection('archives').doc();
+    const newArch = { id: docRef.id, ...archive };
+    await docRef.set(newArch);
+    return newArch;
+  } catch (err) {
+    console.error('Error in addArchive:', err);
+    throw err;
+  }
 }
 
 export async function deleteArchive(id) {
@@ -380,12 +422,12 @@ export async function deleteArchive(id) {
     if (jsonData.archives.length < before) { saveJsonDb(); return true; }
     return false;
   }
-  let result;
   try {
-    result = await Archive.deleteOne({ _id: new mongoose.Types.ObjectId(id) });
-  } catch {
-    result = { deletedCount: 0 };
+    const docRef = db.collection('archives').doc(id.toString());
+    await docRef.delete();
+    return true;
+  } catch (err) {
+    console.error('Error in deleteArchive:', err);
+    return false;
   }
-  return result.deletedCount > 0;
 }
-
