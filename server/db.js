@@ -40,16 +40,42 @@ function findServiceAccountKey() {
 }
 
 try {
-  const serviceAccountPath = findServiceAccountKey();
-  if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
-    const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+  let credentialConfig = null;
+
+  // 1. Check for FIREBASE_SERVICE_ACCOUNT JSON string in env (for Render / Production)
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+      credentialConfig = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    } catch (e) {
+      console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT env var:', e.message);
+    }
+  }
+  
+  // 2. Check for individual env vars
+  if (!credentialConfig && process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
+    credentialConfig = {
+      projectId: process.env.FIREBASE_PROJECT_ID || 'wjbmr-journal',
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    };
+  }
+
+  // 3. Check for local JSON service account key file
+  if (!credentialConfig) {
+    const serviceAccountPath = findServiceAccountKey();
+    if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
+      credentialConfig = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+    }
+  }
+
+  if (credentialConfig) {
     initializeApp({
-      credential: cert(serviceAccount)
+      credential: cert(credentialConfig)
     });
     db = getFirestore();
-    console.log(`Connected to Firebase Firestore successfully using ${path.basename(serviceAccountPath)}.`);
+    console.log('Connected to Firebase Firestore successfully.');
   } else {
-    console.warn('Firebase serviceAccountKey not found. Falling back to local JSON database.');
+    console.warn('Firebase credentials not found. Falling back to local JSON database.');
     useJsonDb = true;
   }
 } catch (err) {
