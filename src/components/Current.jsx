@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
-import { FileText, Download, Share2, MessageSquare, ChevronDown, ChevronUp, Search as SearchIcon, Minus, Plus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, Download, Share2, MessageSquare, ChevronDown, ChevronUp, Search as SearchIcon, Minus, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import API_BASE from '../api.js';
 
 export default function Current({ articles = [], onNavigateToArticle }) {
   const [expandedId, setExpandedId] = useState(null);
+
+  // Pagination state
+  const [currentPageNum, setCurrentPageNum] = useState(1);
+  const ARTICLES_PER_PAGE = 6;
 
   // Resolve a usable PDF URL — prepend API_BASE for /uploads/ paths
   const resolvePdfUrl = (url) => {
@@ -44,6 +48,7 @@ export default function Current({ articles = [], onNavigateToArticle }) {
   const handleApplyFilter = () => {
     setAppliedSearchTerm(searchTerm);
     setAppliedVolumes(selectedVolumes);
+    setCurrentPageNum(1); // reset to first page on new filter
   };
 
   const handleResetFilter = () => {
@@ -51,6 +56,7 @@ export default function Current({ articles = [], onNavigateToArticle }) {
     setSelectedVolumes([]);
     setAppliedSearchTerm('');
     setAppliedVolumes([]);
+    setCurrentPageNum(1); // reset to first page on filter reset
   };
 
   // Filter articles based on applied filters
@@ -59,7 +65,7 @@ export default function Current({ articles = [], onNavigateToArticle }) {
       art.title.toLowerCase().includes(appliedSearchTerm.toLowerCase()) ||
       (typeof art.authors === 'string' 
         ? art.authors.toLowerCase().includes(appliedSearchTerm.toLowerCase())
-        : art.authors.some(auth => auth.name.toLowerCase().includes(appliedSearchTerm.toLowerCase()))
+        : (Array.isArray(art.authors) ? art.authors.some(auth => auth.name.toLowerCase().includes(appliedSearchTerm.toLowerCase())) : false)
       );
 
     const matchesVolume = 
@@ -69,19 +75,31 @@ export default function Current({ articles = [], onNavigateToArticle }) {
     return matchesSearch && matchesVolume;
   });
 
+  // Calculate pagination bounds
+  const totalPages = Math.ceil(filteredArticles.length / ARTICLES_PER_PAGE) || 1;
+  const startIndex = (currentPageNum - 1) * ARTICLES_PER_PAGE;
+  const paginatedArticles = filteredArticles.slice(startIndex, startIndex + ARTICLES_PER_PAGE);
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPageNum(newPage);
+      window.scrollTo({ top: 200, behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="container">
-      {/* Page Title */}
+      {/* Page Title - Updated August 2026 to April 2026 */}
       <div style={{ marginBottom: '32px' }}>
         <h2 className="section-title">Current Issue</h2>
         <p style={{ color: 'var(--text-muted)' }}>
-          Browse WJBMR issue 1 August 2026 volume 13 no. 1 table of contents.
+          Browse WJBMR issue 1 April 2026 volume 13 no. 1 table of contents.
         </p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2.5fr', gap: '32px' }} className="responsive-home-grid">
         
-        {/* Left Side: Filter Sidebar (matches the user screenshot layout exactly!) */}
+        {/* Left Side: Filter Sidebar */}
         <div>
           <div style={{
             backgroundColor: 'var(--bg-white)',
@@ -103,52 +121,40 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   cursor: 'pointer',
-                  fontWeight: '700',
-                  fontSize: '16px',
-                  color: 'var(--text-dark)',
                   paddingBottom: '12px',
                   borderBottom: '1px solid var(--border-color)',
-                  userSelect: 'none'
+                  fontWeight: '700',
+                  color: 'var(--primary-dark)'
                 }}
               >
                 <span>Search</span>
                 {isSearchExpanded ? <Minus size={16} /> : <Plus size={16} />}
               </div>
-              
+
               {isSearchExpanded && (
-                <div style={{ marginTop: '16px', position: 'relative' }}>
-                  <input 
-                    type="text" 
-                    placeholder="Search with keyword"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 36px 12px 16px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-color)',
-                      fontSize: '14px',
-                      fontFamily: 'var(--font-sans)',
-                      outline: 'none',
-                      boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)',
-                      backgroundColor: 'var(--bg-light)'
-                    }}
-                  />
-                  <SearchIcon 
-                    size={16} 
-                    style={{
-                      position: 'absolute',
-                      right: '12px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: 'var(--text-muted)'
-                    }} 
-                  />
+                <div style={{ marginTop: '16px' }}>
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      type="text" 
+                      placeholder="Keyword / Author"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px 10px 36px',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color)',
+                        fontSize: '13px',
+                        outline: 'none'
+                      }}
+                    />
+                    <SearchIcon size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Volume Filter Section */}
+            {/* Volume Selection Section */}
             <div>
               <div 
                 onClick={() => setIsCategoryExpanded(!isCategoryExpanded)}
@@ -157,54 +163,28 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   cursor: 'pointer',
-                  fontWeight: '700',
-                  fontSize: '16px',
-                  color: 'var(--text-dark)',
                   paddingBottom: '12px',
                   borderBottom: '1px solid var(--border-color)',
-                  userSelect: 'none'
+                  fontWeight: '700',
+                  color: 'var(--primary-dark)'
                 }}
               >
-                <span>By category</span>
+                <span>Volume</span>
                 {isCategoryExpanded ? <Minus size={16} /> : <Plus size={16} />}
               </div>
 
               {isCategoryExpanded && (
-                <div style={{
-                  marginTop: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px'
-                }}>
-                  {uniqueVolumes.map(vol => (
-                    <label 
-                      key={vol} 
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        color: 'var(--text-dark)',
-                        fontWeight: '500'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <input 
-                          type="checkbox" 
-                          checked={selectedVolumes.includes(vol)}
-                          onChange={() => handleVolumeCheckboxChange(vol)}
-                          style={{
-                            width: '18px',
-                            height: '18px',
-                            borderRadius: '4px',
-                            border: '1px solid var(--border-color)',
-                            cursor: 'pointer'
-                          }}
-                        />
-                        <span>{vol}</span>
-                      </div>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+                <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {uniqueVolumes.map((vol) => (
+                    <label key={vol} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={selectedVolumes.includes(vol)}
+                        onChange={() => handleVolumeCheckboxChange(vol)}
+                        style={{ accentColor: 'var(--primary-color)' }}
+                      />
+                      <span style={{ flex: 1 }}>{vol}</span>
+                      <span style={{ fontSize: '11px', backgroundColor: 'var(--bg-light)', padding: '2px 6px', borderRadius: '4px' }}>
                         {volumeCounts[vol]}
                       </span>
                     </label>
@@ -213,159 +193,135 @@ export default function Current({ articles = [], onNavigateToArticle }) {
               )}
             </div>
 
-            {/* Action Buttons (Themed blue instead of green for brand consistency!) */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
               <button 
                 onClick={handleApplyFilter}
-                className="submit-form-btn"
                 style={{
-                  padding: '12px',
-                  fontSize: '14px',
+                  flex: 1,
+                  padding: '10px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: 'var(--primary-color)',
+                  color: 'var(--bg-white)',
                   fontWeight: '700',
-                  borderRadius: '8px',
-                  width: '100%',
-                  background: 'var(--primary-color)'
+                  fontSize: '13px',
+                  cursor: 'pointer'
                 }}
               >
-                Apply filter
+                Apply
               </button>
-              
               <button 
                 onClick={handleResetFilter}
                 style={{
-                  background: 'none',
-                  border: 'none',
+                  padding: '10px 16px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-white)',
                   color: 'var(--text-muted)',
-                  fontSize: '14px',
                   fontWeight: '600',
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                  padding: '8px',
-                  transition: 'var(--transition)'
+                  fontSize: '13px',
+                  cursor: 'pointer'
                 }}
-                onMouseEnter={(e) => e.target.style.color = 'var(--primary-color)'}
-                onMouseLeave={(e) => e.target.style.color = 'var(--text-muted)'}
               >
-                Reset filter
+                Reset
               </button>
             </div>
 
           </div>
         </div>
 
-        {/* Right Side: Articles Listing */}
+        {/* Right Side: Articles Table / Cards */}
         <div>
-          {/* Cover Panel Header */}
-          <div className="glass-card responsive-home-grid" style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 3fr',
-            gap: '32px',
-            background: 'linear-gradient(135deg, var(--bg-white) 0%, var(--primary-light) 100%)',
-            borderColor: 'var(--accent-light)',
+          {/* Header Bar */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '24px',
-            marginBottom: '24px'
+            marginBottom: '16px',
+            fontSize: '14px',
+            color: 'var(--text-muted)'
           }}>
-            <div style={{
-              backgroundColor: 'var(--primary-color)',
-              color: 'var(--bg-white)',
-              padding: '30px 16px',
-              borderRadius: 'var(--radius-md)',
-              textAlign: 'center',
-              boxShadow: 'var(--shadow-sm)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              height: '180px'
-            }}>
-              <div style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '1px' }}>WJBMR COVER</div>
-              <div style={{ fontSize: '28px', fontWeight: '800', fontFamily: 'var(--font-display)', margin: '8px 0 4px 0' }}>Vol. 13</div>
-              <div style={{ fontSize: '15px', fontWeight: '600' }}>Issue 1</div>
-              <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '8px' }}>August 2026</div>
-            </div>
-
             <div>
-              <h3 style={{ fontSize: '20px', color: 'var(--primary-dark)', marginBottom: '8px' }}>
-                World Journal of Biomedical Research (WJBMR)
-              </h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                <span><strong>Release:</strong> August 2026</span>
-                <span><strong>Indexed:</strong> AIM, AJOL, CrossRef</span>
-              </div>
-              {/* <p className="text-block" style={{ fontSize: '13px', margin: 0 }}>
-                Filter publications using the sidebar search tools. Access full-text abstracts or read directly in the HTML frames below.
-              </p> */}
+              Showing {filteredArticles.length > 0 ? `${startIndex + 1}–${Math.min(startIndex + ARTICLES_PER_PAGE, filteredArticles.length)}` : 0} of {filteredArticles.length} Articles
             </div>
+            {totalPages > 1 && (
+              <div style={{ fontSize: '13px', fontWeight: '600' }}>
+                Page {currentPageNum} of {totalPages}
+              </div>
+            )}
           </div>
 
-          {/* Dynamic Article List */}
           {filteredArticles.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {filteredArticles.map(art => (
+              {paginatedArticles.map((art) => (
                 <div 
-                  key={art.id} 
+                  key={art.id}
                   className="glass-card" 
-                  style={{ padding: '24px', margin: 0, cursor: 'pointer' }}
-                  onClick={() => onNavigateToArticle(art.id)}
+                  style={{ 
+                    padding: '24px', 
+                    borderRadius: '12px',
+                    border: '1px solid var(--border-color)',
+                    boxShadow: 'var(--shadow-sm)',
+                    transition: 'var(--transition)',
+                    backgroundColor: 'var(--bg-white)'
+                  }}
                 >
-                  <div className="article-card-row">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '1' }}>
-                      <span style={{
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        color: 'var(--text-muted)',
-                        letterSpacing: '0.5px'
-                      }}>
-                        {art.type || art.category} | PAGES: {art.pages} | {art.volume}
-                      </span>
-                      
-                      <h4 
-                        style={{ 
-                          fontSize: '17px', 
-                          color: 'var(--primary-color)', 
-                          lineHeight: '1.4',
-                          margin: 0,
-                          transition: 'var(--transition)'
-                        }}
-                        onMouseEnter={(e) => e.target.style.color = 'var(--accent-color)'}
-                        onMouseLeave={(e) => e.target.style.color = 'var(--primary-color)'}
-                      >
-                        {art.title}
-                      </h4>
-                      
-                      <div style={{ fontSize: '13px', color: 'var(--text-dark)', fontWeight: '500' }}>
-                        {typeof art.authors === 'string'
-                          ? <span dangerouslySetInnerHTML={{ __html: art.authors }} />
-                          : art.authors.map(a => a.name).join(', ')
-                        }
-                      </div>
+                  {/* Article Title */}
+                  <h3 
+                    onClick={() => onNavigateToArticle(art.id)}
+                    style={{ 
+                      fontSize: '18px', 
+                      lineHeight: '1.4', 
+                      color: 'var(--primary-dark)', 
+                      marginBottom: '12px',
+                      cursor: 'pointer',
+                      fontWeight: '700'
+                    }}
+                    className="article-card-title-hover"
+                  >
+                    {art.title}
+                  </h3>
 
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                        {art.doi}
-                      </div>
+                  {/* Authors */}
+                  <div style={{ fontSize: '13px', color: 'var(--text-dark)', marginBottom: '12px', fontWeight: '500' }}>
+                    {typeof art.authors === 'string' 
+                      ? <span dangerouslySetInnerHTML={{ __html: art.authors }} />
+                      : art.authors.map(a => a.name).join(', ')
+                    }
+                  </div>
+
+                  {/* Metadata Row */}
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    fontSize: '12px',
+                    color: 'var(--text-muted)',
+                    paddingTop: '12px',
+                    borderTop: '1px dashed var(--border-color)'
+                  }}>
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                      <span><strong>Category:</strong> {art.category}</span>
+                      <span><strong>Volume:</strong> {art.volume || 'Volume 13 No 1 (2026)'}</span>
+                      <span><strong>Issue:</strong> {art.issue || 'Issue 1 (April 2026)'}</span>
                     </div>
 
-                    {/* Actions Box */}
-                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                       <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleAbstract(art.id);
-                        }}
+                        onClick={() => toggleAbstract(art.id)}
                         style={{
-                          padding: '6px 14px',
-                          borderRadius: 'var(--radius-full)',
-                          border: '1px solid var(--border-color)',
-                          backgroundColor: 'var(--bg-white)',
+                          background: 'none',
+                          border: 'none',
                           color: 'var(--primary-color)',
-                          fontFamily: 'var(--font-display)',
                           fontWeight: '700',
                           fontSize: '12px',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '6px',
-                          transition: 'var(--transition)'
+                          gap: '4px'
                         }}
                       >
                         Abstract {expandedId === art.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -376,7 +332,6 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                         target="_blank"
                         rel="noopener noreferrer"
                         download
-                        onClick={(e) => e.stopPropagation()}
                         style={{
                           padding: '6px 14px',
                           borderRadius: 'var(--radius-full)',
@@ -413,7 +368,6 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                     >
                       <h5 style={{ fontSize: '13px', color: 'var(--primary-dark)', marginBottom: '8px' }}>Abstract</h5>
                       
-                      {/* Check if article is dynamic HTML upload or default text */}
                       {art.isHtmlArticle ? (
                         <div 
                           dangerouslySetInnerHTML={{ __html: art.abstract }} 
@@ -444,6 +398,79 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                   )}
                 </div>
               ))}
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginTop: '24px',
+                  paddingTop: '16px',
+                  borderTop: '1px solid var(--border-color)'
+                }}>
+                  <button 
+                    onClick={() => handlePageChange(currentPageNum - 1)}
+                    disabled={currentPageNum === 1}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: currentPageNum === 1 ? 'var(--bg-light)' : 'var(--bg-white)',
+                      color: currentPageNum === 1 ? 'var(--text-muted)' : 'var(--primary-dark)',
+                      cursor: currentPageNum === 1 ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '13px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    <ChevronLeft size={16} /> Previous
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, idx) => idx + 1).map(pageNum => (
+                    <button 
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: '6px',
+                        border: pageNum === currentPageNum ? '1px solid var(--primary-color)' : '1px solid var(--border-color)',
+                        backgroundColor: pageNum === currentPageNum ? 'var(--primary-color)' : 'var(--bg-white)',
+                        color: pageNum === currentPageNum ? 'var(--bg-white)' : 'var(--primary-dark)',
+                        fontWeight: '700',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        minWidth: '36px'
+                      }}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+
+                  <button 
+                    onClick={() => handlePageChange(currentPageNum + 1)}
+                    disabled={currentPageNum === totalPages}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: currentPageNum === totalPages ? 'var(--bg-light)' : 'var(--bg-white)',
+                      color: currentPageNum === totalPages ? 'var(--text-muted)' : 'var(--primary-dark)',
+                      cursor: currentPageNum === totalPages ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '13px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    Next <ChevronRight size={16} />
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div style={{
