@@ -343,14 +343,14 @@ export async function saveFile(filename, contentType, buffer) {
   const dest = path.join(uploadsDir, filename);
   fs.writeFileSync(dest, buffer);
 
-  const fileDataBase64 = buffer.length <= 950 * 1024 ? buffer.toString('base64') : null;
+  const canStoreInDb = buffer.length <= 1000 * 1024;
 
   if (useJsonDb) {
     if (!jsonData.files) jsonData.files = {};
     jsonData.files[filename] = {
       filename,
       contentType,
-      fileData: fileDataBase64,
+      fileData: canStoreInDb ? buffer.toString('base64') : null,
       uploadedAt: new Date().toISOString()
     };
     saveJsonDb();
@@ -361,8 +361,8 @@ export async function saveFile(filename, contentType, buffer) {
         contentType,
         uploadedAt: new Date().toISOString()
       };
-      if (fileDataBase64) {
-        payload.fileData = fileDataBase64;
+      if (canStoreInDb) {
+        payload.fileData = buffer; // Buffer is saved natively as Bytes in Firestore
       }
       await db.collection('files').doc(filename).set(payload, { merge: true });
     } catch (err) {
@@ -403,7 +403,7 @@ export async function getFile(filename) {
   if (useJsonDb && jsonData.files && jsonData.files[filename]) {
     const fData = jsonData.files[filename];
     if (fData.fileData) {
-      data = Buffer.from(fData.fileData, 'base64');
+      data = Buffer.isBuffer(fData.fileData) ? fData.fileData : Buffer.from(fData.fileData, 'base64');
       fs.writeFileSync(dest, data);
       return { data, contentType: fData.contentType || contentType };
     }
@@ -414,9 +414,19 @@ export async function getFile(filename) {
         const docData = docSnap.data();
         if (docData.contentType) contentType = docData.contentType;
         if (docData.fileData) {
-          data = Buffer.from(docData.fileData, 'base64');
-          fs.writeFileSync(dest, data);
-          return { data, contentType };
+          if (Buffer.isBuffer(docData.fileData)) {
+            data = docData.fileData;
+          } else if (docData.fileData.toBuffer) {
+            data = docData.fileData.toBuffer();
+          } else if (typeof docData.fileData === 'string') {
+            data = Buffer.from(docData.fileData, 'base64');
+          } else if (docData.fileData.buffer || Array.isArray(docData.fileData.data)) {
+            data = Buffer.from(docData.fileData.buffer || docData.fileData.data);
+          }
+          if (data) {
+            fs.writeFileSync(dest, data);
+            return { data, contentType };
+          }
         }
       }
     } catch (e) {
