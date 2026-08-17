@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
-import { FileText, Download, Share2, MessageSquare, ChevronDown, ChevronUp, Search as SearchIcon, Minus, Plus } from 'lucide-react';
+import { FileText, Download, Share2, MessageSquare, ChevronDown, ChevronUp, Search as SearchIcon, Minus, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import API_BASE from '../api.js';
 
 export default function Current({ articles = [], onNavigateToArticle }) {
   const [expandedId, setExpandedId] = useState(null);
+
+  // Pagination state (Max 6 articles per page)
+  const [currentPageNum, setCurrentPageNum] = useState(1);
+  const ARTICLES_PER_PAGE = 6;
 
   // Resolve a usable PDF URL — prepend API_BASE for /uploads/ paths
   const resolvePdfUrl = (url) => {
@@ -44,6 +48,7 @@ export default function Current({ articles = [], onNavigateToArticle }) {
   const handleApplyFilter = () => {
     setAppliedSearchTerm(searchTerm);
     setAppliedVolumes(selectedVolumes);
+    setCurrentPageNum(1); // Reset to page 1 on new search/filter
   };
 
   const handleResetFilter = () => {
@@ -51,6 +56,7 @@ export default function Current({ articles = [], onNavigateToArticle }) {
     setSelectedVolumes([]);
     setAppliedSearchTerm('');
     setAppliedVolumes([]);
+    setCurrentPageNum(1); // Reset to page 1 on filter reset
   };
 
   // Filter articles based on applied filters
@@ -59,7 +65,7 @@ export default function Current({ articles = [], onNavigateToArticle }) {
       art.title.toLowerCase().includes(appliedSearchTerm.toLowerCase()) ||
       (typeof art.authors === 'string' 
         ? art.authors.toLowerCase().includes(appliedSearchTerm.toLowerCase())
-        : art.authors.some(auth => auth.name.toLowerCase().includes(appliedSearchTerm.toLowerCase()))
+        : (Array.isArray(art.authors) ? art.authors.some(auth => auth.name.toLowerCase().includes(appliedSearchTerm.toLowerCase())) : false)
       );
 
     const matchesVolume = 
@@ -69,19 +75,31 @@ export default function Current({ articles = [], onNavigateToArticle }) {
     return matchesSearch && matchesVolume;
   });
 
+  // Calculate pagination bounds
+  const totalPages = Math.ceil(filteredArticles.length / ARTICLES_PER_PAGE) || 1;
+  const startIndex = (currentPageNum - 1) * ARTICLES_PER_PAGE;
+  const paginatedArticles = filteredArticles.slice(startIndex, startIndex + ARTICLES_PER_PAGE);
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPageNum(newPage);
+      window.scrollTo({ top: 200, behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="container">
       {/* Page Title */}
       <div style={{ marginBottom: '32px' }}>
         <h2 className="section-title">Current Issue</h2>
         <p style={{ color: 'var(--text-muted)' }}>
-          Browse WJBMR issue 1 August 2026 volume 13 no. 1 table of contents.
+          Browse WJBMR issue 1 April 2026 volume 13 no. 1 table of contents.
         </p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2.5fr', gap: '32px' }} className="responsive-home-grid">
         
-        {/* Left Side: Filter Sidebar (matches the user screenshot layout exactly!) */}
+        {/* Left Side: Filter Sidebar */}
         <div>
           <div style={{
             backgroundColor: 'var(--bg-white)',
@@ -213,7 +231,7 @@ export default function Current({ articles = [], onNavigateToArticle }) {
               )}
             </div>
 
-            {/* Action Buttons (Themed blue instead of green for brand consistency!) */}
+            {/* Action Buttons */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
               <button 
                 onClick={handleApplyFilter}
@@ -281,7 +299,7 @@ export default function Current({ articles = [], onNavigateToArticle }) {
               <div style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '1px' }}>WJBMR COVER</div>
               <div style={{ fontSize: '28px', fontWeight: '800', fontFamily: 'var(--font-display)', margin: '8px 0 4px 0' }}>Vol. 13</div>
               <div style={{ fontSize: '15px', fontWeight: '600' }}>Issue 1</div>
-              <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '8px' }}>August 2026</div>
+              <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '8px' }}>April 2026</div>
             </div>
 
             <div>
@@ -289,19 +307,35 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                 World Journal of Biomedical Research (WJBMR)
               </h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                <span><strong>Release:</strong> August 2026</span>
+                <span><strong>Release:</strong> April 2026</span>
                 <span><strong>Indexed:</strong> AIM, AJOL, CrossRef</span>
               </div>
-              {/* <p className="text-block" style={{ fontSize: '13px', margin: 0 }}>
-                Filter publications using the sidebar search tools. Access full-text abstracts or read directly in the HTML frames below.
-              </p> */}
             </div>
           </div>
 
-          {/* Dynamic Article List */}
+          {/* Results Summary & Page Status Bar */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '16px',
+            fontSize: '13px',
+            color: 'var(--text-muted)'
+          }}>
+            <div>
+              Showing {filteredArticles.length > 0 ? `${startIndex + 1}–${Math.min(startIndex + ARTICLES_PER_PAGE, filteredArticles.length)}` : 0} of {filteredArticles.length} Articles
+            </div>
+            {totalPages > 1 && (
+              <div style={{ fontWeight: '600', color: 'var(--primary-dark)' }}>
+                Page {currentPageNum} of {totalPages}
+              </div>
+            )}
+          </div>
+
+          {/* Dynamic Paginated Article List */}
           {filteredArticles.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {filteredArticles.map(art => (
+              {paginatedArticles.map(art => (
                 <div 
                   key={art.id} 
                   className="glass-card" 
@@ -413,7 +447,6 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                     >
                       <h5 style={{ fontSize: '13px', color: 'var(--primary-dark)', marginBottom: '8px' }}>Abstract</h5>
                       
-                      {/* Check if article is dynamic HTML upload or default text */}
                       {art.isHtmlArticle ? (
                         <div 
                           dangerouslySetInnerHTML={{ __html: art.abstract }} 
@@ -444,6 +477,79 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                   )}
                 </div>
               ))}
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginTop: '24px',
+                  paddingTop: '16px',
+                  borderTop: '1px solid var(--border-color)'
+                }}>
+                  <button 
+                    onClick={() => handlePageChange(currentPageNum - 1)}
+                    disabled={currentPageNum === 1}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: currentPageNum === 1 ? 'var(--bg-light)' : 'var(--bg-white)',
+                      color: currentPageNum === 1 ? 'var(--text-muted)' : 'var(--primary-dark)',
+                      cursor: currentPageNum === 1 ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '13px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    <ChevronLeft size={16} /> Previous
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, idx) => idx + 1).map(pageNum => (
+                    <button 
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: '6px',
+                        border: pageNum === currentPageNum ? '1px solid var(--primary-color)' : '1px solid var(--border-color)',
+                        backgroundColor: pageNum === currentPageNum ? 'var(--primary-color)' : 'var(--bg-white)',
+                        color: pageNum === currentPageNum ? 'var(--bg-white)' : 'var(--primary-dark)',
+                        fontWeight: '700',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        minWidth: '36px'
+                      }}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+
+                  <button 
+                    onClick={() => handlePageChange(currentPageNum + 1)}
+                    disabled={currentPageNum === totalPages}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: currentPageNum === totalPages ? 'var(--bg-light)' : 'var(--bg-white)',
+                      color: currentPageNum === totalPages ? 'var(--text-muted)' : 'var(--primary-dark)',
+                      cursor: currentPageNum === totalPages ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '13px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    Next <ChevronRight size={16} />
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div style={{
