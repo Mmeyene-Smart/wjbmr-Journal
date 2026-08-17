@@ -1,6 +1,6 @@
 import React from 'react';
 import { User, Calendar, BookOpen, Download, Share2, Printer, ChevronRight, FileCheck } from 'lucide-react';
-import API_BASE from '../api.js';
+import API_BASE, { resolvePdfUrl } from '../api.js';
 
 export default function ArticleDetail({ article, articles = [], onNavigateToArticle, onBackToHome }) {
   if (!article) {
@@ -18,13 +18,6 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
   const relatedArticles = articles
     .filter(art => art.id !== article.id)
     .slice(0, 5); // display up to 5 related articles
-
-  // Resolve a usable PDF URL — fall back to the sample PDF if none is set
-  const resolvePdfUrl = (url) => {
-    if (!url || url === '#') return '/sample_article.pdf';
-    if (url.startsWith('/uploads/')) return `${API_BASE}${url}`;
-    return url;
-  };
 
   const pdfUrl = resolvePdfUrl(article.pdfUrl);
 

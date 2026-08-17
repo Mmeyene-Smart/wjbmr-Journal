@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FileText, Download, Share2, MessageSquare, ChevronDown, ChevronUp, Search as SearchIcon, Minus, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
-import API_BASE from '../api.js';
+import API_BASE, { resolvePdfUrl } from '../api.js';
 
 export default function Current({ articles = [], onNavigateToArticle }) {
   const [expandedId, setExpandedId] = useState(null);
@@ -9,12 +9,6 @@ export default function Current({ articles = [], onNavigateToArticle }) {
   const [currentPageNum, setCurrentPageNum] = useState(1);
   const ARTICLES_PER_PAGE = 6;
 
-  // Resolve a usable PDF URL — prepend API_BASE for /uploads/ paths
-  const resolvePdfUrl = (url) => {
-    if (!url || url === '#') return '/sample_article.pdf';
-    if (url.startsWith('/uploads/')) return `${API_BASE}${url}`;
-    return url;
-  };
 
   // Sidebar state
   const [searchTerm, setSearchTerm] = useState('');

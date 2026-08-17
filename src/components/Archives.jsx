@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, ChevronDown, ChevronRight, FolderOpen, RefreshCw } from 'lucide-react';
-import API_BASE from '../api.js';
+import API_BASE, { resolvePdfUrl } from '../api.js';
 
 export default function Archives({ onNavigate }) {
   const [openVolumeIdx, setOpenVolumeIdx] = useState(0);
@@ -166,7 +166,7 @@ export default function Archives({ onNavigate }) {
                               {iss.papers.map((paper, pIdx) => (
                                 <a 
                                   key={pIdx}
-                                  href={`${API_BASE}${paper.pdfUrl}`}
+                                  href={resolvePdfUrl(paper.pdfUrl)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="archive-paper-link"

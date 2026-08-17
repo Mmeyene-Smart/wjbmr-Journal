@@ -29,14 +29,45 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // Serve uploaded files dynamically from database (or local directory fallback)
+app.use('/uploads', express.static(uploadsDir));
+
 app.get('/uploads/:filename', async (req, res) => {
   try {
-    const file = await db.getFile(req.params.filename);
-    if (!file) {
-      return res.status(404).send('File not found');
+    const filename = path.basename(req.params.filename);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    const file = await db.getFile(filename);
+    if (file) {
+      res.setHeader('Content-Type', file.contentType || 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+      return res.send(file.data);
     }
-    res.setHeader('Content-Type', file.contentType);
-    res.send(file.data);
+
+    // Disk fallback checks (data/uploads or public/uploads)
+    const diskPath = path.join(uploadsDir, filename);
+    if (fs.existsSync(diskPath)) {
+      const ext = path.extname(filename).toLowerCase();
+      const mimeTypes = {
+        '.pdf': 'application/pdf',
+        '.html': 'text/html',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.svg': 'image/svg+xml',
+        '.webp': 'image/webp'
+      };
+      res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+      return res.sendFile(diskPath);
+    }
+
+    const publicPath = path.join(__dirname, 'public', 'uploads', filename);
+    if (fs.existsSync(publicPath)) {
+      return res.sendFile(publicPath);
+    }
+
+    return res.status(404).send('File not found');
   } catch (err) {
     console.error('Error serving file:', err);
     res.status(500).send('Internal Server Error');

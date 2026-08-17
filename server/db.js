@@ -343,13 +343,28 @@ export async function saveFile(filename, contentType, buffer) {
   const dest = path.join(uploadsDir, filename);
   fs.writeFileSync(dest, buffer);
 
-  if (!useJsonDb && db) {
+  const fileDataBase64 = buffer.length <= 950 * 1024 ? buffer.toString('base64') : null;
+
+  if (useJsonDb) {
+    if (!jsonData.files) jsonData.files = {};
+    jsonData.files[filename] = {
+      filename,
+      contentType,
+      fileData: fileDataBase64,
+      uploadedAt: new Date().toISOString()
+    };
+    saveJsonDb();
+  } else if (db) {
     try {
-      await db.collection('files').doc(filename).set({
+      const payload = {
         filename,
         contentType,
         uploadedAt: new Date().toISOString()
-      }, { merge: true });
+      };
+      if (fileDataBase64) {
+        payload.fileData = fileDataBase64;
+      }
+      await db.collection('files').doc(filename).set(payload, { merge: true });
     } catch (err) {
       console.warn('Failed to save file metadata to Firestore:', err.message);
     }
@@ -358,19 +373,21 @@ export async function saveFile(filename, contentType, buffer) {
 
 export async function getFile(filename) {
   const dest = path.join(uploadsDir, filename);
+  let data = null;
+  let contentType = 'application/octet-stream';
+  const ext = path.extname(filename).toLowerCase();
+  
+  if (ext === '.pdf') contentType = 'application/pdf';
+  else if (ext === '.html') contentType = 'text/html';
+  else if (ext === '.png') contentType = 'image/png';
+  else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+  else if (ext === '.gif') contentType = 'image/gif';
+  else if (ext === '.svg') contentType = 'image/svg+xml';
+  else if (ext === '.webp') contentType = 'image/webp';
+
+  // 1. If file exists on disk
   if (fs.existsSync(dest)) {
-    const data = fs.readFileSync(dest);
-    let contentType = 'application/octet-stream';
-    const ext = path.extname(filename).toLowerCase();
-    if (ext === '.pdf') contentType = 'application/pdf';
-    else if (ext === '.html') contentType = 'text/html';
-    else if (ext === '.png') contentType = 'image/png';
-    else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
-    else if (ext === '.gif') contentType = 'image/gif';
-    else if (ext === '.svg') contentType = 'image/svg+xml';
-    else if (ext === '.webp') contentType = 'image/webp';
-    
-    // Check if contentType is saved in metadata
+    data = fs.readFileSync(dest);
     if (!useJsonDb && db) {
       try {
         const docSnap = await db.collection('files').doc(filename).get();
@@ -379,9 +396,34 @@ export async function getFile(filename) {
         }
       } catch (e) {}
     }
-    
     return { data, contentType };
   }
+
+  // 2. If file missing from disk (e.g. after Render restart), restore from DB fallback
+  if (useJsonDb && jsonData.files && jsonData.files[filename]) {
+    const fData = jsonData.files[filename];
+    if (fData.fileData) {
+      data = Buffer.from(fData.fileData, 'base64');
+      fs.writeFileSync(dest, data);
+      return { data, contentType: fData.contentType || contentType };
+    }
+  } else if (!useJsonDb && db) {
+    try {
+      const docSnap = await db.collection('files').doc(filename).get();
+      if (docSnap.exists) {
+        const docData = docSnap.data();
+        if (docData.contentType) contentType = docData.contentType;
+        if (docData.fileData) {
+          data = Buffer.from(docData.fileData, 'base64');
+          fs.writeFileSync(dest, data);
+          return { data, contentType };
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to retrieve file from Firestore fallback:', e.message);
+    }
+  }
+
   return null;
 }
 

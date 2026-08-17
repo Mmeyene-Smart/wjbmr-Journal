@@ -4,7 +4,7 @@ import {
   RefreshCw, FileText, Trash2, Copy, Image, Check, Code2,
   PenSquare, Library, Plus, ExternalLink, ClipboardCopy, FolderOpen
 } from 'lucide-react';
-import API_BASE from '../api.js';
+import API_BASE, { resolvePdfUrl } from '../api.js';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    TAB BUTTON helper
@@ -1420,7 +1420,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
                       
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <a 
-                          href={`${API_BASE}${arch.pdfUrl}`} 
+                          href={resolvePdfUrl(arch.pdfUrl)} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           style={{
