@@ -41,6 +41,7 @@ function TabBtn({ active, onClick, children }) {
 export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], onDeleteArticle, onUpdateArticle }) {
   const [activeTab, setActiveTab] = useState('publish');
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [archiveConfirmId, setArchiveConfirmId] = useState(null);
   const [editingArticle, setEditingArticle] = useState(null);
 
   /* ── Publish form state ── */
@@ -183,6 +184,24 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
   }, []);
 
   useEffect(() => { fetchImages(); }, [fetchImages]);
+
+  const handleArchiveArticle = (art) => {
+    fetch(`${API_BASE}/api/articles/${art.id}/archive`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        volume: art.volume,
+        issue: art.issue
+      })
+    })
+      .then(res => res.ok ? res.json() : Promise.reject('Failed to archive article'))
+      .then(() => {
+        if (onDeleteArticle) onDeleteArticle(art.id);
+        setArchiveConfirmId(null);
+        fetchArchives();
+      })
+      .catch(err => alert(err || 'Failed to archive article'));
+  };
 
   /* ── Archives ── */
   const fetchArchives = useCallback(() => {
@@ -1004,6 +1023,22 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
                         >
                           <ExternalLink size={11} /> Open Full Size
                         </a>
+
+                        {/* Delete image */}
+                        <button
+                          onClick={() => handleDeleteImage(img.id)}
+                          style={{
+                            width: '100%', padding: '6px 8px', border: '1px solid #fca5a5',
+                            borderRadius: '5px', background: '#fff5f5', color: '#dc2626',
+                            cursor: 'pointer', fontSize: '11px', fontWeight: '700',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = '#fff5f5'; }}
+                        >
+                          <Trash2 size={11} /> Delete Image
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1069,7 +1104,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
                     )}
                   </div>
 
-                  {/* Delete / Confirm section */}
+                  {/* Delete / Archive / Confirm section */}
                   <div style={{ flexShrink: 0 }}>
                     {deleteConfirmId === art.id ? (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
@@ -1113,12 +1148,51 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
                           </button>
                         </div>
                       </div>
+                    ) : archiveConfirmId === art.id ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '12px', color: '#d97706', fontWeight: '700' }}>Move to Archives?</span>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            onClick={() => handleArchiveArticle(art)}
+                            style={{
+                              padding: '6px 14px',
+                              background: '#d97706',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontWeight: '700',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '5px'
+                            }}
+                          >
+                            <FolderOpen size={13} /> Yes, Archive
+                          </button>
+                          <button
+                            onClick={() => setArchiveConfirmId(null)}
+                            style={{
+                              padding: '6px 14px',
+                              background: 'var(--bg-light)',
+                              color: 'var(--text-dark)',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: '6px',
+                              fontWeight: '600',
+                              fontSize: '12px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
                     ) : (
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         <button
                           onClick={() => handleStartEdit(art)}
                           style={{
-                            padding: '7px 16px',
+                            padding: '7px 14px',
                             background: 'none',
                             color: 'var(--primary-color)',
                             border: '1px solid var(--primary-color)',
@@ -1128,7 +1202,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '6px',
+                            gap: '5px',
                             transition: 'all 0.2s'
                           }}
                           onMouseEnter={e => { e.currentTarget.style.background = 'var(--primary-light)'; }}
@@ -1137,9 +1211,30 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
                           <PenSquare size={13} /> Edit
                         </button>
                         <button
+                          onClick={() => setArchiveConfirmId(art.id)}
+                          style={{
+                            padding: '7px 14px',
+                            background: 'none',
+                            color: '#d97706',
+                            border: '1px solid #fcd34d',
+                            borderRadius: '6px',
+                            fontWeight: '700',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = '#fef3c7'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+                        >
+                          <FolderOpen size={13} /> Archive
+                        </button>
+                        <button
                           onClick={() => setDeleteConfirmId(art.id)}
                           style={{
-                            padding: '7px 16px',
+                            padding: '7px 14px',
                             background: 'none',
                             color: '#dc2626',
                             border: '1px solid #fca5a5',
@@ -1149,7 +1244,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '6px',
+                            gap: '5px',
                             transition: 'all 0.2s'
                           }}
                           onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; }}

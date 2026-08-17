@@ -250,6 +250,39 @@ app.delete('/api/articles/:id', async (req, res) => {
   }
 });
 
+// 3a. Archive an article (moves article to archives collection)
+app.post('/api/articles/:id/archive', async (req, res) => {
+  try {
+    const articleId = parseInt(req.params.id);
+    const articles = await db.getArticles();
+    const article = articles.find(a => String(a.id) === String(articleId));
+
+    if (!article) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+
+    const { volume, issue } = req.body;
+
+    const newArchive = {
+      title: article.title,
+      volume: volume || article.volume || 'Volume 12 (2026)',
+      issue: issue || article.issue || 'Issue 2 (June 2026)',
+      pdfUrl: article.pdfUrl || '/sample_article.pdf',
+      uploadedAt: new Date().toISOString()
+    };
+
+    const savedArchive = await db.addArchive(newArchive);
+
+    // Remove from active articles collection (keeping PDF file)
+    await db.deleteArticle(articleId);
+
+    res.status(200).json({ success: true, archive: savedArchive });
+  } catch (err) {
+    console.error('Error archiving article:', err);
+    res.status(500).json({ error: err.message || 'Failed to archive article' });
+  }
+});
+
 // 3b. Update an article
 app.put('/api/articles/:id', upload.fields([
   { name: 'htmlFile', maxCount: 1 },
