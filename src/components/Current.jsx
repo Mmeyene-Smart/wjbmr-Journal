@@ -367,10 +367,6 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                           : art.authors.map(a => a.name).join(', ')
                         }
                       </div>
-
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                        {art.doi}
-                      </div>
                     </div>
 
                     {/* Actions Box */}

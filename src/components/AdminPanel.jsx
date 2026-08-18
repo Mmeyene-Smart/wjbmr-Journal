@@ -381,7 +381,6 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
     if (!formData.keywords.trim()) newErrors.keywords = 'Keywords are required';
     if (!formData.abstract.trim()) newErrors.abstract = 'Article abstract text is required';
     if (!formData.pages.trim()) newErrors.pages = 'Page range is required (e.g. 139 - 148)';
-    if (!formData.doi.trim()) newErrors.doi = 'DOI is required';
     if (!htmlContent.trim()) newErrors.htmlFile = 'HTML content is required';
     if (!editingArticle && !pdfFile) newErrors.pdfFile = 'PDF file upload is required';
     setErrors(newErrors);
@@ -659,8 +658,8 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
                   {errors.pages && <div style={{ color: '#dc2626', fontSize: '12px' }}>{errors.pages}</div>}
                 </div>
                 <div className="form-group">
-                  <label className="form-label">DOI Link *</label>
-                  <input type="text" name="doi" value={formData.doi} onChange={handleInputChange} placeholder="https://doi.org/10.5281/..." className="form-input" disabled={isSubmitting} />
+                  <label className="form-label">DOI Link (Optional)</label>
+                  <input type="text" name="doi" value={formData.doi} onChange={handleInputChange} placeholder="https://doi.org/10.5281/... (optional)" className="form-input" disabled={isSubmitting} />
                   {errors.doi && <div style={{ color: '#dc2626', fontSize: '12px' }}>{errors.doi}</div>}
                 </div>
               </div>
@@ -1116,9 +1115,6 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                       {typeof art.authors === 'string' ? art.authors : art.authors.map(a => a.name).join(', ')}
                     </div>
-                    {art.doi && (
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '2px' }}>{art.doi}</div>
-                    )}
                   </div>
 
                   {/* Delete / Archive / Confirm section */}
