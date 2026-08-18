@@ -40,41 +40,41 @@ export default function Current({ articles = [], onNavigateToArticle }) {
       <div>
         {/* Cover Panel Header */}
         <div className="glass-card responsive-home-grid" style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 3fr',
-          gap: '32px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '24px',
           background: 'linear-gradient(135deg, var(--bg-white) 0%, var(--primary-light) 100%)',
           borderColor: 'var(--accent-light)',
-          alignItems: 'center',
-          padding: '24px',
-          marginBottom: '24px'
+          padding: '16px 20px',
+          marginBottom: '20px'
         }}>
           <div style={{
             backgroundColor: 'var(--primary-color)',
             color: 'var(--bg-white)',
-            padding: '30px 16px',
+            padding: '14px 20px',
             borderRadius: 'var(--radius-md)',
             textAlign: 'center',
             boxShadow: 'var(--shadow-sm)',
             display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
             alignItems: 'center',
-            aspectRatio: '3/4'
+            gap: '12px',
+            flexShrink: 0
           }}>
-            <FileText size={32} style={{ marginBottom: '12px', opacity: 0.9 }} />
-            <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.8, fontWeight: '700' }}>WJBMR</div>
-            <div style={{ fontSize: '18px', fontWeight: '800', margin: '4px 0' }}>Vol 13 No 1</div>
-            <div style={{ fontSize: '12px', opacity: 0.9 }}>2026</div>
+            <FileText size={24} style={{ opacity: 0.9 }} />
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.8, fontWeight: '700' }}>WJBMR</div>
+              <div style={{ fontSize: '15px', fontWeight: '800', margin: '1px 0' }}>Vol 13 No 1</div>
+              <div style={{ fontSize: '11px', opacity: 0.9 }}>2026</div>
+            </div>
           </div>
-          <div>
-            <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--accent-color)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+          <div style={{ flex: '1' }}>
+            <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--accent-color)', textTransform: 'uppercase', letterSpacing: '1px' }}>
               Current Issue • Vol 13 No 1 (2026)
             </span>
-            <h3 style={{ fontSize: '20px', color: 'var(--primary-dark)', marginBottom: '8px' }}>
+            <h3 style={{ fontSize: '18px', color: 'var(--primary-dark)', margin: '4px 0 6px 0' }}>
               World Journal of Biomedical Research (WJBMR)
             </h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '12px', color: 'var(--text-muted)' }}>
               <span><strong>Release:</strong> April 2026</span>
               <span><strong>Indexed:</strong> AIM, AJOL, CrossRef</span>
             </div>
