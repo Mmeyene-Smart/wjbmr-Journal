@@ -141,7 +141,7 @@ export default function App() {
           />
         );
       case 'Archives':
-        return <Archives articles={articles} onNavigate={handleNavigate} />;
+        return <Archives onNavigate={handleNavigate} />;
       case 'EditorialBoard':
         return <EditorialBoard />;
       case 'Guidelines':

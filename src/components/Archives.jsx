@@ -5,6 +5,7 @@ import API_BASE, { resolvePdfUrl } from '../api.js';
 export default function Archives({ articles = [], onNavigate }) {
   const [openVolumeIdx, setOpenVolumeIdx] = useState(0);
   const [archives, setArchives] = useState([]);
+  const [currentVolumes, setCurrentVolumes] = useState(new Set());
   const [loading, setLoading] = useState(true);
 
   // Sidebar filter states
@@ -18,13 +19,22 @@ export default function Archives({ articles = [], onNavigate }) {
   const [isCategoryExpanded, setIsCategoryExpanded] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/archives`)
-      .then(res => res.ok ? res.json() : [])
-      .then(data => {
-        setArchives(data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    // Fetch archives and current articles in parallel
+    // so we can exclude the current issue volume from the archive list
+    Promise.all([
+      fetch(`${API_BASE}/api/archives`).then(res => res.ok ? res.json() : []).catch(() => []),
+      fetch(`${API_BASE}/api/articles`).then(res => res.ok ? res.json() : []).catch(() => [])
+    ]).then(([archivesData, articlesData]) => {
+      setArchives(archivesData);
+      // Collect all volume names that exist in the current (active) articles collection
+      const activeVolumes = new Set(
+        articlesData
+          .map(a => a.volume)
+          .filter(Boolean)
+      );
+      setCurrentVolumes(activeVolumes);
+      setLoading(false);
+    });
   }, []);
 
   const toggleVolume = (idx) => {
@@ -49,28 +59,18 @@ export default function Archives({ articles = [], onNavigate }) {
     setAppliedVolumes([]);
   };
 
-  // Combine raw archives and articles for grouping
+  // Group raw archives flat array into hierarchical structure (past archives only)
+  // Excludes any volume that matches a volume currently in the active articles collection
   const getGroupedArchives = () => {
     const volumesMap = {};
 
-    const allItems = [...archives];
-    if (articles && Array.isArray(articles)) {
-      articles.forEach(art => {
-        if (!allItems.some(a => a.id === art.id || (a.title === art.title && a.volume === art.volume))) {
-          allItems.push({
-            id: art.id,
-            title: art.title,
-            volume: art.volume || 'Volume 13 No 1 (2026)',
-            issue: art.issue || 'Issue 1 (2026)',
-            pdfUrl: art.pdfUrl
-          });
-        }
-      });
-    }
+    archives.forEach(arch => {
+      const volName = arch.volume;
+      const issName = arch.issue || 'Issue 1';
+      if (!volName) return;
 
-    allItems.forEach(arch => {
-      const volName = arch.volume || 'Volume 13 No 1 (2026)';
-      const issName = arch.issue || 'Issue 1 (2026)';
+      // Skip volumes that belong to the current (active) issue
+      if (currentVolumes.has(volName)) return;
 
       if (!volumesMap[volName]) {
         volumesMap[volName] = {};
