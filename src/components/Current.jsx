@@ -1,73 +1,19 @@
 import React, { useState } from 'react';
-import { FileText, Download, Share2, MessageSquare, ChevronDown, ChevronUp, Search as SearchIcon, Minus, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileText, Download, Share2, MessageSquare, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import API_BASE, { resolvePdfUrl } from '../api.js';
 
 export default function Current({ articles = [], onNavigateToArticle }) {
   const [expandedId, setExpandedId] = useState(null);
 
-  // Pagination state (Max 6 articles per page)
+  // Pagination state (12 articles per page: 6 on left, 6 on right)
   const [currentPageNum, setCurrentPageNum] = useState(1);
-  const ARTICLES_PER_PAGE = 6;
-
-
-  // Sidebar state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedVolumes, setSelectedVolumes] = useState([]);
-  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
-  const [appliedVolumes, setAppliedVolumes] = useState([]);
-
-  // Collapsible accordion parts in sidebar
-  const [isSearchExpanded, setIsSearchExpanded] = useState(true);
-  const [isCategoryExpanded, setIsCategoryExpanded] = useState(true);
-
-  // Group unique volumes and calculate counts
-  const volumeCounts = articles.reduce((acc, art) => {
-    const vol = art.volume || 'Volume 12 (2026)';
-    acc[vol] = (acc[vol] || 0) + 1;
-    return acc;
-  }, {});
-
-  const uniqueVolumes = Object.keys(volumeCounts);
+  const ARTICLES_PER_PAGE = 12;
 
   const toggleAbstract = (id) => {
     setExpandedId(expandedId === id ? null : id);
   };
 
-  const handleVolumeCheckboxChange = (vol) => {
-    setSelectedVolumes(prev => 
-      prev.includes(vol) ? prev.filter(v => v !== vol) : [...prev, vol]
-    );
-  };
-
-  const handleApplyFilter = () => {
-    setAppliedSearchTerm(searchTerm);
-    setAppliedVolumes(selectedVolumes);
-    setCurrentPageNum(1); // Reset to page 1 on new search/filter
-  };
-
-  const handleResetFilter = () => {
-    setSearchTerm('');
-    setSelectedVolumes([]);
-    setAppliedSearchTerm('');
-    setAppliedVolumes([]);
-    setCurrentPageNum(1); // Reset to page 1 on filter reset
-  };
-
-  // Filter articles based on applied filters
-  const filteredArticles = articles.filter(art => {
-    const matchesSearch = 
-      art.title.toLowerCase().includes(appliedSearchTerm.toLowerCase()) ||
-      (typeof art.authors === 'string' 
-        ? art.authors.toLowerCase().includes(appliedSearchTerm.toLowerCase())
-        : (Array.isArray(art.authors) ? art.authors.some(auth => auth.name.toLowerCase().includes(appliedSearchTerm.toLowerCase())) : false)
-      );
-
-    const matchesVolume = 
-      appliedVolumes.length === 0 || 
-      appliedVolumes.includes(art.volume || 'Volume 12 (2026)');
-
-    return matchesSearch && matchesVolume;
-  });
+  const filteredArticles = articles;
 
   // Calculate pagination bounds
   const totalPages = Math.ceil(filteredArticles.length / ARTICLES_PER_PAGE) || 1;
@@ -91,244 +37,72 @@ export default function Current({ articles = [], onNavigateToArticle }) {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2.5fr', gap: '32px' }} className="responsive-home-grid">
-        
-        {/* Left Side: Filter Sidebar */}
-        <div>
+      <div>
+        {/* Cover Panel Header */}
+        <div className="glass-card responsive-home-grid" style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 3fr',
+          gap: '32px',
+          background: 'linear-gradient(135deg, var(--bg-white) 0%, var(--primary-light) 100%)',
+          borderColor: 'var(--accent-light)',
+          alignItems: 'center',
+          padding: '24px',
+          marginBottom: '24px'
+        }}>
           <div style={{
-            backgroundColor: 'var(--bg-white)',
-            borderRadius: '12px',
-            border: '1px solid var(--border-color)',
+            backgroundColor: 'var(--primary-color)',
+            color: 'var(--bg-white)',
+            padding: '30px 16px',
+            borderRadius: 'var(--radius-md)',
+            textAlign: 'center',
             boxShadow: 'var(--shadow-sm)',
-            overflow: 'hidden',
-            padding: '24px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '24px'
+            justifyContent: 'center',
+            alignItems: 'center',
+            aspectRatio: '3/4'
           }}>
-            {/* Search Section */}
-            <div>
-              <div 
-                onClick={() => setIsSearchExpanded(!isSearchExpanded)}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  fontWeight: '700',
-                  fontSize: '16px',
-                  color: 'var(--text-dark)',
-                  paddingBottom: '12px',
-                  borderBottom: '1px solid var(--border-color)',
-                  userSelect: 'none'
-                }}
-              >
-                <span>Search</span>
-                {isSearchExpanded ? <Minus size={16} /> : <Plus size={16} />}
-              </div>
-              
-              {isSearchExpanded && (
-                <div style={{ marginTop: '16px', position: 'relative' }}>
-                  <input 
-                    type="text" 
-                    placeholder="Search with keyword"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 36px 12px 16px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-color)',
-                      fontSize: '14px',
-                      fontFamily: 'var(--font-sans)',
-                      outline: 'none',
-                      boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)',
-                      backgroundColor: 'var(--bg-light)'
-                    }}
-                  />
-                  <SearchIcon 
-                    size={16} 
-                    style={{
-                      position: 'absolute',
-                      right: '12px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: 'var(--text-muted)'
-                    }} 
-                  />
-                </div>
-              )}
+            <FileText size={32} style={{ marginBottom: '12px', opacity: 0.9 }} />
+            <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.8, fontWeight: '700' }}>WJBMR</div>
+            <div style={{ fontSize: '18px', fontWeight: '800', margin: '4px 0' }}>Vol 13 No 1</div>
+            <div style={{ fontSize: '12px', opacity: 0.9 }}>2026</div>
+          </div>
+          <div>
+            <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--accent-color)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              Current Issue • Vol 13 No 1 (2026)
+            </span>
+            <h3 style={{ fontSize: '20px', color: 'var(--primary-dark)', marginBottom: '8px' }}>
+              World Journal of Biomedical Research (WJBMR)
+            </h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+              <span><strong>Release:</strong> April 2026</span>
+              <span><strong>Indexed:</strong> AIM, AJOL, CrossRef</span>
             </div>
-
-            {/* Volume Filter Section */}
-            <div>
-              <div 
-                onClick={() => setIsCategoryExpanded(!isCategoryExpanded)}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  fontWeight: '700',
-                  fontSize: '16px',
-                  color: 'var(--text-dark)',
-                  paddingBottom: '12px',
-                  borderBottom: '1px solid var(--border-color)',
-                  userSelect: 'none'
-                }}
-              >
-                <span>By category</span>
-                {isCategoryExpanded ? <Minus size={16} /> : <Plus size={16} />}
-              </div>
-
-              {isCategoryExpanded && (
-                <div style={{
-                  marginTop: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px'
-                }}>
-                  {uniqueVolumes.map(vol => (
-                    <label 
-                      key={vol} 
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        color: 'var(--text-dark)',
-                        fontWeight: '500'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <input 
-                          type="checkbox" 
-                          checked={selectedVolumes.includes(vol)}
-                          onChange={() => handleVolumeCheckboxChange(vol)}
-                          style={{
-                            width: '18px',
-                            height: '18px',
-                            borderRadius: '4px',
-                            border: '1px solid var(--border-color)',
-                            cursor: 'pointer'
-                          }}
-                        />
-                        <span>{vol}</span>
-                      </div>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                        {volumeCounts[vol]}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
-              <button 
-                onClick={handleApplyFilter}
-                className="submit-form-btn"
-                style={{
-                  padding: '12px',
-                  fontSize: '14px',
-                  fontWeight: '700',
-                  borderRadius: '8px',
-                  width: '100%',
-                  background: 'var(--primary-color)'
-                }}
-              >
-                Apply filter
-              </button>
-              
-              <button 
-                onClick={handleResetFilter}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                  padding: '8px',
-                  transition: 'var(--transition)'
-                }}
-                onMouseEnter={(e) => e.target.style.color = 'var(--primary-color)'}
-                onMouseLeave={(e) => e.target.style.color = 'var(--text-muted)'}
-              >
-                Reset filter
-              </button>
-            </div>
-
           </div>
         </div>
 
-        {/* Right Side: Articles Listing */}
-        <div>
-          {/* Cover Panel Header */}
-          <div className="glass-card responsive-home-grid" style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 3fr',
-            gap: '32px',
-            background: 'linear-gradient(135deg, var(--bg-white) 0%, var(--primary-light) 100%)',
-            borderColor: 'var(--accent-light)',
-            alignItems: 'center',
-            padding: '24px',
-            marginBottom: '24px'
-          }}>
-            <div style={{
-              backgroundColor: 'var(--primary-color)',
-              color: 'var(--bg-white)',
-              padding: '30px 16px',
-              borderRadius: 'var(--radius-md)',
-              textAlign: 'center',
-              boxShadow: 'var(--shadow-sm)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              height: '180px'
-            }}>
-              <div style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '1px' }}>WJBMR COVER</div>
-              <div style={{ fontSize: '28px', fontWeight: '800', fontFamily: 'var(--font-display)', margin: '8px 0 4px 0' }}>Vol. 13</div>
-              <div style={{ fontSize: '15px', fontWeight: '600' }}>Issue 1</div>
-              <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '8px' }}>April 2026</div>
-            </div>
-
-            <div>
-              <h3 style={{ fontSize: '20px', color: 'var(--primary-dark)', marginBottom: '8px' }}>
-                World Journal of Biomedical Research (WJBMR)
-              </h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                <span><strong>Release:</strong> April 2026</span>
-                <span><strong>Indexed:</strong> AIM, AJOL, CrossRef</span>
-              </div>
-            </div>
+        {/* Results Summary & Page Status Bar */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '16px',
+          fontSize: '13px',
+          color: 'var(--text-muted)'
+        }}>
+          <div>
+            Showing {filteredArticles.length > 0 ? `${startIndex + 1}–${Math.min(startIndex + ARTICLES_PER_PAGE, filteredArticles.length)}` : 0} of {filteredArticles.length} Articles
           </div>
-
-          {/* Results Summary & Page Status Bar */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '16px',
-            fontSize: '13px',
-            color: 'var(--text-muted)'
-          }}>
-            <div>
-              Showing {filteredArticles.length > 0 ? `${startIndex + 1}–${Math.min(startIndex + ARTICLES_PER_PAGE, filteredArticles.length)}` : 0} of {filteredArticles.length} Articles
+          {totalPages > 1 && (
+            <div style={{ fontWeight: '600', color: 'var(--primary-dark)' }}>
+              Page {currentPageNum} of {totalPages}
             </div>
-            {totalPages > 1 && (
-              <div style={{ fontWeight: '600', color: 'var(--primary-dark)' }}>
-                Page {currentPageNum} of {totalPages}
-              </div>
-            )}
-          </div>
+          )}
+        </div>
 
-          {/* Dynamic Paginated Article List */}
-          {filteredArticles.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {/* Dynamic Paginated Article List (2 Columns: 6 left, 6 right) */}
+        {filteredArticles.length > 0 ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }} className="responsive-home-grid">
               {paginatedArticles.map(art => (
                 <div 
                   key={art.id} 
@@ -555,8 +329,6 @@ export default function Current({ articles = [], onNavigateToArticle }) {
             </div>
           )}
         </div>
-
-      </div>
     </div>
   );
 }

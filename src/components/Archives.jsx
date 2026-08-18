@@ -1,11 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, ChevronDown, ChevronRight, FolderOpen, RefreshCw } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronRight, RefreshCw, Search as SearchIcon, Minus, Plus } from 'lucide-react';
 import API_BASE, { resolvePdfUrl } from '../api.js';
 
-export default function Archives({ onNavigate }) {
+export default function Archives({ articles = [], onNavigate }) {
   const [openVolumeIdx, setOpenVolumeIdx] = useState(0);
   const [archives, setArchives] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Sidebar filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedVolumes, setSelectedVolumes] = useState([]);
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
+  const [appliedVolumes, setAppliedVolumes] = useState([]);
+
+  // Accordion states for filter sections
+  const [isSearchExpanded, setIsSearchExpanded] = useState(true);
+  const [isCategoryExpanded, setIsCategoryExpanded] = useState(true);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/archives`)
@@ -21,13 +31,46 @@ export default function Archives({ onNavigate }) {
     setOpenVolumeIdx(openVolumeIdx === idx ? null : idx);
   };
 
-  // Group raw archives flat array into hierarchial structure
+  const handleVolumeCheckboxChange = (vol) => {
+    setSelectedVolumes(prev =>
+      prev.includes(vol) ? prev.filter(v => v !== vol) : [...prev, vol]
+    );
+  };
+
+  const handleApplyFilter = () => {
+    setAppliedSearchTerm(searchTerm);
+    setAppliedVolumes(selectedVolumes);
+  };
+
+  const handleResetFilter = () => {
+    setSearchTerm('');
+    setSelectedVolumes([]);
+    setAppliedSearchTerm('');
+    setAppliedVolumes([]);
+  };
+
+  // Combine raw archives and articles for grouping
   const getGroupedArchives = () => {
     const volumesMap = {};
 
-    archives.forEach(arch => {
-      const volName = arch.volume;
-      const issName = arch.issue;
+    const allItems = [...archives];
+    if (articles && Array.isArray(articles)) {
+      articles.forEach(art => {
+        if (!allItems.some(a => a.id === art.id || (a.title === art.title && a.volume === art.volume))) {
+          allItems.push({
+            id: art.id,
+            title: art.title,
+            volume: art.volume || 'Volume 13 No 1 (2026)',
+            issue: art.issue || 'Issue 1 (2026)',
+            pdfUrl: art.pdfUrl
+          });
+        }
+      });
+    }
+
+    allItems.forEach(arch => {
+      const volName = arch.volume || 'Volume 13 No 1 (2026)';
+      const issName = arch.issue || 'Issue 1 (2026)';
 
       if (!volumesMap[volName]) {
         volumesMap[volName] = {};
@@ -50,24 +93,40 @@ export default function Archives({ onNavigate }) {
         papers: issuesMap[issName]
       }));
 
+      const totalPapersCount = issuesList.reduce((sum, iss) => sum + iss.papers.length, 0);
+
       return {
         volume: volName,
-        issues: issuesList
+        issues: issuesList,
+        totalPapers: totalPapersCount
       };
     });
   };
 
   const archiveVolumes = getGroupedArchives();
 
-  // Sidebar stats
-  let totalIssues = 0;
-  let totalArticles = 0;
-  archiveVolumes.forEach(vol => {
-    totalIssues += vol.issues.length;
-    vol.issues.forEach(iss => {
-      totalArticles += iss.papers.length;
-    });
-  });
+  // All unique volume names & total paper counts for sidebar category list
+  const volumeList = archiveVolumes.map(v => ({
+    volume: v.volume,
+    count: v.totalPapers
+  }));
+
+  // Filter volumes based on user selection and search query
+  const filteredArchiveVolumes = archiveVolumes
+    .filter(vol => appliedVolumes.length === 0 || appliedVolumes.includes(vol.volume))
+    .map(vol => {
+      if (!appliedSearchTerm.trim()) return vol;
+      const filteredIssues = vol.issues.map(iss => ({
+        ...iss,
+        papers: iss.papers.filter(p => p.title.toLowerCase().includes(appliedSearchTerm.toLowerCase()))
+      })).filter(iss => iss.papers.length > 0);
+
+      return {
+        ...vol,
+        issues: filteredIssues
+      };
+    })
+    .filter(vol => vol.issues.length > 0);
 
   return (
     <div className="container">
@@ -79,30 +138,185 @@ export default function Archives({ onNavigate }) {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 3.2fr', gap: '32px' }} className="responsive-home-grid">
-        {/* Sidebar Info */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2.5fr', gap: '32px' }} className="responsive-home-grid">
+        
+        {/* Left Side: Filter Sidebar (Replacing Archives Info) */}
         <div>
-          <div className="glass-card" style={{ padding: '24px' }}>
-            <h3 style={{ fontSize: '18px', color: 'var(--primary-dark)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FolderOpen size={18} style={{ color: 'var(--primary-color)' }} /> Archives Info
-            </h3>
-            <p className="text-block" style={{ fontSize: '13px', lineHeight: '1.5', margin: 0 }}>
-              WJBMR maintains digital archives of all issues published since its inception in 2015. All articles are preserved in perpetuity.
-            </p>
-            <div style={{
-              marginTop: '16px',
-              paddingTop: '16px',
-              borderTop: '1px solid var(--border-color)',
-              fontSize: '12px',
-              color: 'var(--text-muted)'
-            }}>
-              <strong>Total Issues:</strong> {totalIssues} Issue{totalIssues !== 1 ? 's' : ''}<br />
-              <strong>Total Articles:</strong> {totalArticles} Paper{totalArticles !== 1 ? 's' : ''}
+          <div style={{
+            backgroundColor: 'var(--bg-white)',
+            borderRadius: '12px',
+            border: '1px solid var(--border-color)',
+            boxShadow: 'var(--shadow-sm)',
+            overflow: 'hidden',
+            padding: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '24px'
+          }}>
+            {/* Search Section */}
+            <div>
+              <div 
+                onClick={() => setIsSearchExpanded(!isSearchExpanded)}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  fontWeight: '700',
+                  fontSize: '16px',
+                  color: 'var(--text-dark)',
+                  paddingBottom: '12px',
+                  borderBottom: '1px solid var(--border-color)',
+                  userSelect: 'none'
+                }}
+              >
+                <span>Search</span>
+                {isSearchExpanded ? <Minus size={16} /> : <Plus size={16} />}
+              </div>
+              
+              {isSearchExpanded && (
+                <div style={{ marginTop: '16px', position: 'relative' }}>
+                  <input 
+                    type="text" 
+                    placeholder="Search with keyword"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 36px 12px 16px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      fontSize: '14px',
+                      fontFamily: 'var(--font-sans)',
+                      outline: 'none',
+                      boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)',
+                      backgroundColor: 'var(--bg-light)'
+                    }}
+                  />
+                  <SearchIcon 
+                    size={16} 
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: 'var(--text-muted)'
+                    }} 
+                  />
+                </div>
+              )}
             </div>
+
+            {/* Category / Volume Filter Section */}
+            <div>
+              <div 
+                onClick={() => setIsCategoryExpanded(!isCategoryExpanded)}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  fontWeight: '700',
+                  fontSize: '16px',
+                  color: 'var(--text-dark)',
+                  paddingBottom: '12px',
+                  borderBottom: '1px solid var(--border-color)',
+                  userSelect: 'none'
+                }}
+              >
+                <span>By category</span>
+                {isCategoryExpanded ? <Minus size={16} /> : <Plus size={16} />}
+              </div>
+
+              {isCategoryExpanded && (
+                <div style={{
+                  marginTop: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}>
+                  {volumeList.length === 0 ? (
+                    <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No categories found</div>
+                  ) : (
+                    volumeList.map(({ volume, count }) => (
+                      <label 
+                        key={volume} 
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          color: 'var(--text-dark)',
+                          fontWeight: '500'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={selectedVolumes.includes(volume)}
+                            onChange={() => handleVolumeCheckboxChange(volume)}
+                            style={{
+                              width: '18px',
+                              height: '18px',
+                              borderRadius: '4px',
+                              border: '1px solid var(--border-color)',
+                              cursor: 'pointer'
+                            }}
+                          />
+                          <span>{volume}</span>
+                        </div>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+                          {count}
+                        </span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
+              <button 
+                onClick={handleApplyFilter}
+                className="submit-form-btn"
+                style={{
+                  padding: '12px',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  borderRadius: '8px',
+                  width: '100%',
+                  background: 'var(--primary-color)'
+                }}
+              >
+                Apply filter
+              </button>
+              
+              <button 
+                onClick={handleResetFilter}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  padding: '8px',
+                  transition: 'var(--transition)'
+                }}
+                onMouseEnter={(e) => e.target.style.color = 'var(--primary-color)'}
+                onMouseLeave={(e) => e.target.style.color = 'var(--text-muted)'}
+              >
+                Reset filter
+              </button>
+            </div>
+
           </div>
         </div>
 
-        {/* Accordion List */}
+        {/* Right Side: Accordion List */}
         <div>
           {loading ? (
             <div style={{
@@ -116,7 +330,7 @@ export default function Archives({ onNavigate }) {
               <RefreshCw size={36} className="animate-spin" style={{ margin: '0 auto 12px', color: 'var(--primary-color)' }} />
               Loading journal archives...
             </div>
-          ) : archiveVolumes.length === 0 ? (
+          ) : filteredArchiveVolumes.length === 0 ? (
             <div style={{
               textAlign: 'center',
               padding: '40px',
@@ -125,11 +339,11 @@ export default function Archives({ onNavigate }) {
               color: 'var(--text-muted)',
               backgroundColor: 'var(--bg-white)'
             }}>
-              No archives available.
+              No matching archives found.
             </div>
           ) : (
             <div className="accordion">
-              {archiveVolumes.map((vol, vIdx) => {
+              {filteredArchiveVolumes.map((vol, vIdx) => {
                 const isOpen = openVolumeIdx === vIdx;
                 return (
                   <div key={vIdx} className="accordion-item">
@@ -182,8 +396,7 @@ export default function Archives({ onNavigate }) {
                     )}
                   </div>
                 );
-              })
-            }
+              })}
             </div>
           )}
         </div>
@@ -191,4 +404,3 @@ export default function Archives({ onNavigate }) {
     </div>
   );
 }
-
