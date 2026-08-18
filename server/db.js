@@ -119,22 +119,32 @@ export async function getArticles() {
 }
 
 export async function getArticleById(id) {
-  const targetId = parseInt(id);
   if (useJsonDb) {
-    const article = jsonData.articles.find(art => art.id === targetId);
+    const article = jsonData.articles.find(art => String(art.id) === String(id));
     return article ? { ...article } : null;
   }
   try {
-    // Check by document ID or numeric id property
-    const docRef = db.collection('articles').doc(targetId.toString());
+    const strId = String(id);
+    const numId = Number(id);
+
+    // 1. Check direct doc ID match
+    const docRef = db.collection('articles').doc(strId);
     const docSnap = await docRef.get();
     if (docSnap.exists) {
-      return { ...docSnap.data() };
+      return { id: docSnap.id, ...docSnap.data() };
     }
-    const querySnap = await db.collection('articles').where('id', '==', targetId).limit(1).get();
+
+    // 2. Query by 'id' field as string or number
+    let querySnap = await db.collection('articles').where('id', '==', strId).limit(1).get();
+    if (querySnap.empty && !isNaN(numId)) {
+      querySnap = await db.collection('articles').where('id', '==', numId).limit(1).get();
+    }
+
     if (!querySnap.empty) {
-      return { ...querySnap.docs[0].data() };
+      const matchDoc = querySnap.docs[0];
+      return { id: matchDoc.id, ...matchDoc.data() };
     }
+
     return null;
   } catch (err) {
     console.error('Error in getArticleById:', err);
@@ -161,27 +171,37 @@ export async function addArticle(article) {
 }
 
 export async function deleteArticle(id) {
-  const targetId = parseInt(id);
   if (useJsonDb) {
     const before = jsonData.articles.length;
-    jsonData.articles = jsonData.articles.filter(art => art.id !== targetId);
+    jsonData.articles = jsonData.articles.filter(art => String(art.id) !== String(id));
     if (jsonData.articles.length < before) { saveJsonDb(); return true; }
     return false;
   }
   try {
-    const docRef = db.collection('articles').doc(targetId.toString());
+    const strId = String(id);
+    const numId = Number(id);
+
+    // 1. Try doc deletion by string document ID
+    const docRef = db.collection('articles').doc(strId);
     const docSnap = await docRef.get();
     if (docSnap.exists) {
       await docRef.delete();
       return true;
     }
-    const querySnap = await db.collection('articles').where('id', '==', targetId).get();
+
+    // 2. Query by 'id' property as string or number
+    let querySnap = await db.collection('articles').where('id', '==', strId).get();
+    if (querySnap.empty && !isNaN(numId)) {
+      querySnap = await db.collection('articles').where('id', '==', numId).get();
+    }
+
     if (!querySnap.empty) {
       for (const d of querySnap.docs) {
         await d.ref.delete();
       }
       return true;
     }
+
     return false;
   } catch (err) {
     console.error('Error in deleteArticle:', err);
@@ -190,9 +210,8 @@ export async function deleteArticle(id) {
 }
 
 export async function updateArticle(id, updatedFields) {
-  const targetId = parseInt(id);
   if (useJsonDb) {
-    const index = jsonData.articles.findIndex(art => art.id === targetId);
+    const index = jsonData.articles.findIndex(art => String(art.id) === String(id));
     if (index !== -1) {
       jsonData.articles[index] = { ...jsonData.articles[index], ...updatedFields };
       saveJsonDb();
@@ -201,20 +220,29 @@ export async function updateArticle(id, updatedFields) {
     return null;
   }
   try {
-    const docRef = db.collection('articles').doc(targetId.toString());
+    const strId = String(id);
+    const numId = Number(id);
+
+    const docRef = db.collection('articles').doc(strId);
     const docSnap = await docRef.get();
     if (docSnap.exists) {
       await docRef.update(updatedFields);
       const updated = await docRef.get();
-      return { ...updated.data() };
+      return { id: updated.id, ...updated.data() };
     }
-    const querySnap = await db.collection('articles').where('id', '==', targetId).limit(1).get();
+
+    let querySnap = await db.collection('articles').where('id', '==', strId).limit(1).get();
+    if (querySnap.empty && !isNaN(numId)) {
+      querySnap = await db.collection('articles').where('id', '==', numId).limit(1).get();
+    }
+
     if (!querySnap.empty) {
       const matchDoc = querySnap.docs[0];
       await matchDoc.ref.update(updatedFields);
       const updated = await matchDoc.ref.get();
-      return { ...updated.data() };
+      return { id: updated.id, ...updated.data() };
     }
+
     return null;
   } catch (err) {
     console.error('Error in updateArticle:', err);

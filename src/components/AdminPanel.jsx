@@ -80,6 +80,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
   const [images, setImages] = useState([]);
   const [loadingImages, setLoadingImages] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingCount, setUploadingCount] = useState(0);
   const [imageError, setImageError] = useState(null);
   const [copyFeedback, setCopyFeedback] = useState({});
   const [imageSearch, setImageSearch] = useState('');
@@ -263,19 +264,34 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
     if (activeTab === 'archives') fetchArchives();
   }, [activeTab, fetchImages, fetchArchives]);
 
-  const handleImageUpload = (file) => {
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { setImageError('Only image files are allowed'); return; }
+  const handleImageUpload = (inputFiles) => {
+    if (!inputFiles) return;
+    const rawFiles = inputFiles instanceof FileList || Array.isArray(inputFiles) ? Array.from(inputFiles) : [inputFiles];
+    if (rawFiles.length === 0) return;
+
+    const fileArray = rawFiles.filter(f => f && f.type && f.type.startsWith('image/'));
+    if (fileArray.length === 0) {
+      setImageError('Only image files are allowed');
+      return;
+    }
     setUploadingImage(true);
+    setUploadingCount(fileArray.length);
     setImageError(null);
     const fd = new FormData();
-    fd.append('imageFile', file);
+    fileArray.forEach(file => {
+      fd.append('imageFiles', file);
+    });
+    fd.append('batch', 'true');
     fetch(`${API_BASE}/api/images`, { method: 'POST', body: fd })
       .then(res => res.ok ? res.json() : res.json().then(d => Promise.reject(d.error)))
-      .then(img => setImages(prev => [img, ...prev]))
-      .catch(err => setImageError(err || 'Upload failed'))
+      .then(data => {
+        const added = Array.isArray(data) ? data : [data];
+        setImages(prev => [...added, ...prev]);
+      })
+      .catch(err => setImageError(typeof err === 'string' ? err : 'Upload failed'))
       .finally(() => {
         setUploadingImage(false);
+        setUploadingCount(0);
         if (imageFileInputRef.current) imageFileInputRef.current.value = '';
       });
   };
@@ -312,8 +328,9 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
   const onDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
-    const file = e.dataTransfer.files[0];
-    handleImageUpload(file);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleImageUpload(e.dataTransfer.files);
+    }
   };
 
   /* ── Publish form validation + submit ── */
@@ -847,7 +864,7 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
             {/* Upload dropzone */}
             <div className="glass-card" style={{ padding: '24px' }}>
               <h3 style={{ fontSize: '17px', marginBottom: '16px', color: 'var(--primary-dark)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Plus size={18} /> Upload New Image
+                <Plus size={18} /> Upload New Images
               </h3>
               <div
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -869,17 +886,17 @@ export default function AdminPanel({ onAddArticle, onBackToHome, articles = [], 
                 }}
               >
                 {uploadingImage ? (
-                  <><RefreshCw size={36} className="animate-spin" style={{ color: 'var(--primary-color)' }} /><span style={{ color: 'var(--text-muted)' }}>Uploading...</span></>
+                  <><RefreshCw size={36} className="animate-spin" style={{ color: 'var(--primary-color)' }} /><span style={{ color: 'var(--text-muted)' }}>Uploading {uploadingCount > 1 ? `${uploadingCount} images` : 'image'}...</span></>
                 ) : (
                   <>
                     <Image size={40} style={{ color: dragOver ? 'var(--primary-color)' : 'var(--text-muted)', opacity: dragOver ? 1 : 0.6 }} />
                     <div>
-                      <strong style={{ color: 'var(--text-dark)' }}>Click to upload</strong> or drag &amp; drop<br />
-                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>PNG, JPG, GIF, SVG, WebP — max 25 MB</span>
+                      <strong style={{ color: 'var(--text-dark)' }}>Click to upload multiple images</strong> or drag &amp; drop<br />
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>PNG, JPG, GIF, SVG, WebP — select multiple files at once</span>
                     </div>
                   </>
                 )}
-                <input type="file" ref={imageFileInputRef} accept="image/*" style={{ display: 'none' }} onChange={(e) => handleImageUpload(e.target.files[0])} />
+                <input type="file" ref={imageFileInputRef} accept="image/*" multiple style={{ display: 'none' }} onChange={(e) => handleImageUpload(e.target.files)} />
               </div>
               {imageError && (
                 <div style={{ color: '#dc2626', fontSize: '13px', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>

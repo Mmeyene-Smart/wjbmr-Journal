@@ -225,7 +225,7 @@ app.post('/api/articles', upload.fields([
 // 3. Delete an article
 app.delete('/api/articles/:id', async (req, res) => {
   try {
-    const articleId = parseInt(req.params.id);
+    const articleId = req.params.id;
     const article = await db.getArticleById(articleId);
 
     if (!article) {
@@ -253,7 +253,7 @@ app.delete('/api/articles/:id', async (req, res) => {
 // 3a. Archive an article (moves article to archives collection)
 app.post('/api/articles/:id/archive', async (req, res) => {
   try {
-    const articleId = parseInt(req.params.id);
+    const articleId = req.params.id;
     const articles = await db.getArticles();
     const article = articles.find(a => String(a.id) === String(articleId));
 
@@ -289,7 +289,7 @@ app.put('/api/articles/:id', upload.fields([
   { name: 'pdfFile', maxCount: 1 }
 ]), async (req, res) => {
   try {
-    const articleId = parseInt(req.params.id);
+    const articleId = req.params.id;
     const existing = await db.getArticleById(articleId);
     if (!existing) {
       return res.status(404).json({ error: 'Article not found' });
@@ -465,27 +465,38 @@ app.get('/api/images', async (req, res) => {
   }
 });
 
-// 8. Upload a new image
-app.post('/api/images', upload.single('imageFile'), async (req, res) => {
+// 8. Upload one or multiple images
+app.post('/api/images', upload.any(), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'Image file is required' });
+    const files = req.files || (req.file ? [req.file] : []);
+    if (!files || files.length === 0) {
+      return res.status(400).json({ error: 'At least one image file is required' });
     }
 
-    const imageFilename = generateFilename('imageFile', req.file.originalname);
-    await db.saveFile(imageFilename, req.file.mimetype, req.file.buffer);
+    const savedImages = [];
+    for (const file of files) {
+      const imageFilename = generateFilename('imageFile', file.originalname);
+      await db.saveFile(imageFilename, file.mimetype, file.buffer);
 
-    const newImage = {
-      filename: req.file.originalname,
-      url: `/uploads/${imageFilename}`,
-      uploadedAt: new Date().toISOString()
-    };
+      const newImage = {
+        filename: file.originalname,
+        url: `/uploads/${imageFilename}`,
+        uploadedAt: new Date().toISOString()
+      };
 
-    const savedImage = await db.addImage(newImage);
-    res.status(201).json(savedImage);
+      const savedImage = await db.addImage(newImage);
+      savedImages.push(savedImage);
+    }
+
+    // If single file uploaded without batch flag, return single object for backward compatibility
+    if (files.length === 1 && req.body?.batch !== 'true') {
+      return res.status(201).json(savedImages[0]);
+    }
+
+    res.status(201).json(savedImages);
   } catch (err) {
-    console.error('Error uploading image:', err);
-    res.status(500).json({ error: err.message || 'Failed to upload image' });
+    console.error('Error uploading image(s):', err);
+    res.status(500).json({ error: err.message || 'Failed to upload image(s)' });
   }
 });
 
