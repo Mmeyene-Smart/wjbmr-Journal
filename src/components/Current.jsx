@@ -76,7 +76,7 @@ export default function Current({ articles = [], onNavigateToArticle }) {
             </h3>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '12px', color: 'var(--text-muted)' }}>
               <span><strong>Release:</strong> April 2026</span>
-              <span><strong>Indexed:</strong> AIM, AJOL</span>
+              
             </div>
           </div>
         </div>
