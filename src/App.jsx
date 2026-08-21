@@ -20,15 +20,38 @@ export default function App() {
   // Fetch articles summary (without fullText) from backend API on mount
   useEffect(() => {
     const CACHE_KEY = 'wjbmr_articles_summary';
-    const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+    const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
-    // Check sessionStorage cache first
+    // Check localStorage cache first (persists across sessions)
     try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
+      const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
         const { data, timestamp } = JSON.parse(cached);
         if (data && Array.isArray(data) && (Date.now() - timestamp) < CACHE_TTL) {
           setArticles(data);
+          // Revalidate in background — refresh cache silently
+          fetch(`${API_BASE}/api/articles/summary`)
+            .then(res => res.ok ? res.json() : Promise.reject())
+            .then(fresh => {
+              if (Array.isArray(fresh) && JSON.stringify(fresh) !== JSON.stringify(data)) {
+                setArticles(fresh);
+                try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data: fresh, timestamp: Date.now() })); } catch {}
+              }
+            })
+            .catch(() => {});
+          return;
+        }
+      }
+    } catch {}
+    // Fallback: check old sessionStorage cache and migrate
+    try {
+      const oldCached = sessionStorage.getItem(CACHE_KEY);
+      if (oldCached) {
+        const { data, timestamp } = JSON.parse(oldCached);
+        if (data && Array.isArray(data) && (Date.now() - timestamp) < CACHE_TTL) {
+          setArticles(data);
+          try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp })); } catch {}
+          try { sessionStorage.removeItem(CACHE_KEY); } catch {}
           return;
         }
       }
@@ -45,7 +68,7 @@ export default function App() {
         if (Array.isArray(data)) {
           setArticles(data);
           try {
-            sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
+            localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
           } catch {}
         }
       })
@@ -115,12 +138,12 @@ export default function App() {
 
   const handleAddArticle = (newArticle) => {
     setArticles(prev => [newArticle, ...prev]);
-    try { sessionStorage.removeItem('wjbmr_articles_summary'); } catch {}
+    try { localStorage.removeItem('wjbmr_articles_summary'); sessionStorage.removeItem('wjbmr_articles_summary'); } catch {}
   };
 
   const handleUpdateArticle = (updatedArticle) => {
     setArticles(prev => prev.map(a => a.id === updatedArticle.id ? updatedArticle : a));
-    try { sessionStorage.removeItem('wjbmr_articles_summary'); } catch {}
+    try { localStorage.removeItem('wjbmr_articles_summary'); sessionStorage.removeItem('wjbmr_articles_summary'); } catch {}
   };
 
   const handleDeleteArticle = async (articleId) => {
@@ -128,7 +151,7 @@ export default function App() {
       const res = await fetch(`${API_BASE}/api/articles/${articleId}`, { method: 'DELETE' });
       if (res.ok) {
         setArticles(prev => prev.filter(a => a.id !== articleId));
-        try { sessionStorage.removeItem('wjbmr_articles_summary'); } catch {}
+        try { localStorage.removeItem('wjbmr_articles_summary'); sessionStorage.removeItem('wjbmr_articles_summary'); } catch {}
       } else {
         alert('Failed to delete article. Please try again.');
       }

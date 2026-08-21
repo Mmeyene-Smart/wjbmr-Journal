@@ -22,7 +22,7 @@ app.use(express.json());
 
 // ─── In-memory cache for articles summary ─────────────────────────────────────
 const articleCache = { data: null, timestamp: 0 };
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 // Setup storage paths inside /data
 const dataDir = path.join(__dirname, 'data');
@@ -130,7 +130,7 @@ app.get('/api/articles/summary', async (req, res) => {
   try {
     const now = Date.now();
     if (articleCache.data && (now - articleCache.timestamp) < CACHE_TTL) {
-      res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+      res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
       return res.json(articleCache.data);
     }
 
@@ -139,7 +139,7 @@ app.get('/api/articles/summary', async (req, res) => {
     articleCache.data = summary;
     articleCache.timestamp = now;
 
-    res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+    res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
     res.json(summary);
   } catch (err) {
     console.error('Error fetching articles summary:', err);

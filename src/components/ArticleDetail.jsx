@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Calendar, BookOpen, Download, Share2, Printer, ChevronRight, FileCheck, RefreshCw } from 'lucide-react';
-import API_BASE, { resolvePdfUrl } from '../api.js';
+import API_BASE from '../api.js';
 
 export default function ArticleDetail({ article, articles = [], onNavigateToArticle, onBackToHome }) {
   const [fullArticle, setFullArticle] = useState(article);
@@ -47,16 +47,12 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
     .filter(art => art.id !== activeArticle.id)
     .slice(0, 5); // display up to 5 related articles
 
-  const pdfUrl = resolvePdfUrl(article.pdfUrl);
+  const pdfUrl = article?.id ? `${API_BASE}/api/articles/${article.id}/pdf` : '#';
 
   const handleDownloadPdf = (e) => {
-    e.preventDefault();
-    const link = document.createElement('a');
-    link.href = pdfUrl;
-    link.download = `${(article.title || 'article').replace(/[<>:"/\\|?*]/g, '').replace(/\s+/g, '-').substring(0, 100)}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Let the browser navigate to the server endpoint which returns
+    // Content-Disposition: attachment with the article title as filename.
+    // No JS blob needed — the server header triggers the download cross-origin.
   };
 
   const getAuthorsDisplay = () => {

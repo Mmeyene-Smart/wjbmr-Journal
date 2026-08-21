@@ -127,7 +127,10 @@ export async function getArticles() {
 
 export async function getArticlesSummary() {
   if (useJsonDb) {
-    return [...jsonData.articles].map(({ fullText, ...rest }) => rest).sort((a, b) => b.id - a.id);
+    return [...jsonData.articles].map(({ fullText, ...rest }) => {
+      if (rest.abstract && rest.abstract.length > 200) rest.abstract = rest.abstract.substring(0, 200) + '...';
+      return rest;
+    }).sort((a, b) => b.id - a.id);
   }
   try {
     const snapshot = await db.collection('articles').get();
@@ -138,6 +141,7 @@ export async function getArticlesSummary() {
       for (const field of ARTICLE_SUMMARY_FIELDS) {
         if (data[field] !== undefined) summary[field] = data[field];
       }
+      if (summary.abstract && summary.abstract.length > 200) summary.abstract = summary.abstract.substring(0, 200) + '...';
       articles.push(summary);
     });
     return articles.sort((a, b) => (b.id || 0) - (a.id || 0));

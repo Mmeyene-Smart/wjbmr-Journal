@@ -22,5 +22,13 @@ export function resolvePdfUrl(url) {
   return `${API_BASE}/uploads/${cleanUrl}`;
 }
 
+/**
+ * Build the server endpoint URL that serves a PDF with the article title as download filename.
+ * Uses Content-Disposition: attachment on the server, so the download triggers cross-origin.
+ */
+export function getArticlePdfUrl(articleId) {
+  return `${API_BASE}/api/articles/${articleId}/pdf`;
+}
+
 export default API_BASE;
 

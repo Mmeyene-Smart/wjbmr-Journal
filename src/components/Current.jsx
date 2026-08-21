@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FileText, Download, Share2, MessageSquare, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
-import API_BASE, { resolvePdfUrl } from '../api.js';
+import API_BASE from '../api.js';
 
 export default function Current({ articles = [], onNavigateToArticle }) {
   const [expandedId, setExpandedId] = useState(null);
@@ -170,17 +170,8 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                       </button>
 
                       <a 
-                        href={resolvePdfUrl(art.pdfUrl)}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const link = document.createElement('a');
-                          link.href = resolvePdfUrl(art.pdfUrl);
-                          link.download = `${(art.title || 'article').replace(/[<>:"/\\|?*]/g, '').replace(/\s+/g, '-').substring(0, 100)}.pdf`;
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-                        }}
+                        href={`${API_BASE}/api/articles/${art.id}/pdf`}
+                        onClick={(e) => e.stopPropagation()}
                         style={{
                           padding: '6px 14px',
                           borderRadius: 'var(--radius-full)',
