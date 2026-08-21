@@ -171,10 +171,16 @@ export default function Current({ articles = [], onNavigateToArticle }) {
 
                       <a 
                         href={resolvePdfUrl(art.pdfUrl)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        download
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const link = document.createElement('a');
+                          link.href = resolvePdfUrl(art.pdfUrl);
+                          link.download = `${(art.title || 'article').replace(/[<>:"/\\|?*]/g, '').replace(/\s+/g, '-').substring(0, 100)}.pdf`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }}
                         style={{
                           padding: '6px 14px',
                           borderRadius: 'var(--radius-full)',
@@ -188,7 +194,8 @@ export default function Current({ articles = [], onNavigateToArticle }) {
                           alignItems: 'center',
                           gap: '6px',
                           transition: 'var(--transition)',
-                          textDecoration: 'none'
+                          textDecoration: 'none',
+                          cursor: 'pointer'
                         }}
                       >
                         <Download size={12} /> PDF

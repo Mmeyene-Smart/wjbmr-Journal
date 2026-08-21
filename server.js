@@ -20,6 +20,10 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ChangeMe!2026@WJBMR';
 app.use(cors());
 app.use(express.json());
 
+// ─── In-memory cache for articles summary ─────────────────────────────────────
+const articleCache = { data: null, timestamp: 0 };
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 // Setup storage paths inside /data
 const dataDir = path.join(__dirname, 'data');
 const uploadsDir = path.join(dataDir, 'uploads');
@@ -29,12 +33,13 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // Serve uploaded files dynamically from database (or local directory fallback)
-app.use('/uploads', express.static(uploadsDir));
+app.use('/uploads', express.static(uploadsDir, { maxAge: '1d' }));
 
 app.get('/uploads/:filename', async (req, res) => {
   try {
     const filename = path.basename(req.params.filename);
     res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
 
     const file = await db.getFile(filename);
     if (file) {
@@ -109,7 +114,7 @@ app.post('/api/auth/verify', (req, res) => {
   setTimeout(() => res.status(401).json({ success: false }), 500);
 });
 
-// 1. Get all articles
+// 1. Get all articles (full — used by admin and internal APIs)
 app.get('/api/articles', async (req, res) => {
   try {
     const articles = await db.getArticles();
@@ -117,6 +122,80 @@ app.get('/api/articles', async (req, res) => {
   } catch (err) {
     console.error('Error fetching articles:', err);
     res.status(500).json({ error: 'Failed to retrieve articles' });
+  }
+});
+
+// 1a. Get articles summary (without fullText — used by frontend pages)
+app.get('/api/articles/summary', async (req, res) => {
+  try {
+    const now = Date.now();
+    if (articleCache.data && (now - articleCache.timestamp) < CACHE_TTL) {
+      res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+      return res.json(articleCache.data);
+    }
+
+    const summary = await db.getArticlesSummary();
+
+    articleCache.data = summary;
+    articleCache.timestamp = now;
+
+    res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+    res.json(summary);
+  } catch (err) {
+    console.error('Error fetching articles summary:', err);
+    res.status(500).json({ error: 'Failed to retrieve articles summary' });
+  }
+});
+
+// 1b. Get single article with full text (used by ArticleDetail)
+app.get('/api/articles/:id/full', async (req, res) => {
+  try {
+    const article = await db.getArticleById(req.params.id);
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+    res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+    res.json(article);
+  } catch (err) {
+    console.error('Error fetching full article:', err);
+    res.status(500).json({ error: 'Failed to retrieve article' });
+  }
+});
+
+// 1c. Download article PDF with proper title filename
+app.get('/api/articles/:id/pdf', async (req, res) => {
+  try {
+    const article = await db.getArticleById(req.params.id);
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+    if (!article.pdfUrl) return res.status(404).json({ error: 'PDF not available for this article' });
+
+    const filename = path.basename(article.pdfUrl.replace('/uploads/', ''));
+    const pdfPath = path.join(uploadsDir, filename);
+
+    // Build a clean download filename from article title
+    const title = (article.title || 'article')
+      .replace(/[<>:"/\\|?*]/g, '')
+      .replace(/\s+/g, '-')
+      .substring(0, 100);
+    const downloadName = `${title}.pdf`;
+
+    // Try disk first
+    if (fs.existsSync(pdfPath)) {
+      res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
+      res.setHeader('Content-Type', 'application/pdf');
+      return res.sendFile(pdfPath);
+    }
+
+    // Fallback: database file storage
+    const file = await db.getFile(filename);
+    if (file) {
+      res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
+      res.setHeader('Content-Type', 'application/pdf');
+      return res.send(file.data);
+    }
+
+    return res.status(404).json({ error: 'PDF file not found' });
+  } catch (err) {
+    console.error('Error serving article PDF:', err);
+    res.status(500).json({ error: 'Failed to serve PDF' });
   }
 });
 
@@ -214,6 +293,7 @@ app.post('/api/articles', upload.fields([
     };
 
     const savedArticle = await db.addArticle(newArticle);
+    articleCache.data = null; // Invalidate summary cache
 
     res.status(201).json(savedArticle);
   } catch (err) {
@@ -240,6 +320,7 @@ app.delete('/api/articles/:id', async (req, res) => {
 
     const success = await db.deleteArticle(articleId);
     if (success) {
+      articleCache.data = null; // Invalidate summary cache
       res.json({ message: 'Article deleted successfully' });
     } else {
       res.status(500).json({ error: 'Failed to delete article from database' });
@@ -275,6 +356,7 @@ app.post('/api/articles/:id/archive', async (req, res) => {
 
     // Remove from active articles collection (keeping PDF file)
     await db.deleteArticle(articleId);
+    articleCache.data = null; // Invalidate summary cache
 
     res.status(200).json({ success: true, archive: savedArchive });
   } catch (err) {
@@ -347,6 +429,7 @@ app.put('/api/articles/:id', upload.fields([
     }
 
     const updatedArticle = await db.updateArticle(articleId, updatedFields);
+    articleCache.data = null; // Invalidate summary cache
     res.json(updatedArticle);
   } catch (err) {
     console.error('Error updating article:', err);
@@ -603,7 +686,7 @@ app.delete('/api/archives/:id', async (req, res) => {
 const distPath = path.join(__dirname, 'dist');
 
 if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
+  app.use(express.static(distPath, { maxAge: '1h' }));
 
   app.get('/*splat', (req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));

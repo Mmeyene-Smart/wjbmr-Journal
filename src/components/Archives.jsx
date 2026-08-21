@@ -23,7 +23,9 @@ export default function Archives({ articles = [], onNavigate }) {
     // so we can exclude the current issue volume from the archive list
     Promise.all([
       fetch(`${API_BASE}/api/archives`).then(res => res.ok ? res.json() : []).catch(() => []),
-      fetch(`${API_BASE}/api/articles`).then(res => res.ok ? res.json() : []).catch(() => [])
+      fetch(`${API_BASE}/api/articles/summary`)
+        .then(res => res.ok ? res.json() : Promise.reject())
+        .catch(() => fetch(`${API_BASE}/api/articles`).then(res => res.ok ? res.json() : []).catch(() => []))
     ]).then(([archivesData, articlesData]) => {
       setArchives(archivesData);
       // Collect all volume names that exist in the current (active) articles collection

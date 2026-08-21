@@ -17,16 +17,36 @@ export default function App() {
   
   const [articles, setArticles] = useState([]);
 
-  // Fetch articles from backend API on mount
+  // Fetch articles summary (without fullText) from backend API on mount
   useEffect(() => {
-    fetch(`${API_BASE}/api/articles`)
+    const CACHE_KEY = 'wjbmr_articles_summary';
+    const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+    // Check sessionStorage cache first
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        if (data && Array.isArray(data) && (Date.now() - timestamp) < CACHE_TTL) {
+          setArticles(data);
+          return;
+        }
+      }
+    } catch {}
+
+    // Try optimized summary endpoint first, fall back to full articles if unavailable
+    fetch(`${API_BASE}/api/articles/summary`)
       .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch articles');
+        if (!res.ok) throw new Error('Summary not available');
         return res.json();
       })
+      .catch(() => fetch(`${API_BASE}/api/articles`).then(res => res.json()))
       .then(data => {
         if (Array.isArray(data)) {
           setArticles(data);
+          try {
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
+          } catch {}
         }
       })
       .catch(err => console.error("Error loading articles from DB:", err));
@@ -95,10 +115,12 @@ export default function App() {
 
   const handleAddArticle = (newArticle) => {
     setArticles(prev => [newArticle, ...prev]);
+    try { sessionStorage.removeItem('wjbmr_articles_summary'); } catch {}
   };
 
   const handleUpdateArticle = (updatedArticle) => {
     setArticles(prev => prev.map(a => a.id === updatedArticle.id ? updatedArticle : a));
+    try { sessionStorage.removeItem('wjbmr_articles_summary'); } catch {}
   };
 
   const handleDeleteArticle = async (articleId) => {
@@ -106,6 +128,7 @@ export default function App() {
       const res = await fetch(`${API_BASE}/api/articles/${articleId}`, { method: 'DELETE' });
       if (res.ok) {
         setArticles(prev => prev.filter(a => a.id !== articleId));
+        try { sessionStorage.removeItem('wjbmr_articles_summary'); } catch {}
       } else {
         alert('Failed to delete article. Please try again.');
       }

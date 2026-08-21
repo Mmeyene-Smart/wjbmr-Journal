@@ -101,6 +101,13 @@ if (useJsonDb) {
 
 // ─── ARTICLES ────────────────────────────────────────────────────────────────
 
+const ARTICLE_SUMMARY_FIELDS = [
+  'id', 'title', 'authors', 'date', 'readTime', 'pdfUrl',
+  'chartType', 'chartData', 'category', 'doi', 'pages',
+  'volume', 'issue', 'abstract', 'keywords', 'affiliations',
+  'correspondingAuthor', 'isHtmlArticle'
+];
+
 export async function getArticles() {
   if (useJsonDb) {
     return [...jsonData.articles].sort((a, b) => b.id - a.id);
@@ -114,6 +121,28 @@ export async function getArticles() {
     return articles.sort((a, b) => (b.id || 0) - (a.id || 0));
   } catch (err) {
     console.error('Error in getArticles:', err);
+    return [];
+  }
+}
+
+export async function getArticlesSummary() {
+  if (useJsonDb) {
+    return [...jsonData.articles].map(({ fullText, ...rest }) => rest).sort((a, b) => b.id - a.id);
+  }
+  try {
+    const snapshot = await db.collection('articles').get();
+    const articles = [];
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const summary = {};
+      for (const field of ARTICLE_SUMMARY_FIELDS) {
+        if (data[field] !== undefined) summary[field] = data[field];
+      }
+      articles.push(summary);
+    });
+    return articles.sort((a, b) => (b.id || 0) - (a.id || 0));
+  } catch (err) {
+    console.error('Error in getArticlesSummary:', err);
     return [];
   }
 }

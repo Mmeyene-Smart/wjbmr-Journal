@@ -1,8 +1,36 @@
-import React from 'react';
-import { User, Calendar, BookOpen, Download, Share2, Printer, ChevronRight, FileCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Calendar, BookOpen, Download, Share2, Printer, ChevronRight, FileCheck, RefreshCw } from 'lucide-react';
 import API_BASE, { resolvePdfUrl } from '../api.js';
 
 export default function ArticleDetail({ article, articles = [], onNavigateToArticle, onBackToHome }) {
+  const [fullArticle, setFullArticle] = useState(article);
+  const [loadingFull, setLoadingFull] = useState(false);
+
+  // Lazy-load full article content if fullText is missing (summary mode)
+  useEffect(() => {
+    if (!article) return;
+    if (article.fullText) {
+      setFullArticle(article);
+      return;
+    }
+
+    setLoadingFull(true);
+    fetch(`${API_BASE}/api/articles/${article.id}/full`)
+      .then(res => {
+        if (!res.ok) throw new Error('Full endpoint not available');
+        return res.json();
+      })
+      .then(data => {
+        if (data) setFullArticle(data);
+      })
+      .catch(() => {
+        // Fallback: full article data might already be in the articles list
+        setFullArticle(article);
+      })
+      .finally(() => setLoadingFull(false));
+  }, [article]);
+
+  const activeArticle = fullArticle || article;
   if (!article) {
     return (
       <div className="container" style={{ padding: '40px 0', textAlign: 'center' }}>
@@ -16,14 +44,24 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
 
   // Filter out the current article to find related articles in the same category or volume
   const relatedArticles = articles
-    .filter(art => art.id !== article.id)
+    .filter(art => art.id !== activeArticle.id)
     .slice(0, 5); // display up to 5 related articles
 
   const pdfUrl = resolvePdfUrl(article.pdfUrl);
 
+  const handleDownloadPdf = (e) => {
+    e.preventDefault();
+    const link = document.createElement('a');
+    link.href = pdfUrl;
+    link.download = `${(article.title || 'article').replace(/[<>:"/\\|?*]/g, '').replace(/\s+/g, '-').substring(0, 100)}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const getAuthorsDisplay = () => {
-    if (typeof article.authors === 'string') return article.authors;
-    return article.authors.map(a => a.name).join(', ');
+    if (typeof activeArticle.authors === 'string') return activeArticle.authors;
+    return activeArticle.authors.map(a => a.name).join(', ');
   };
 
   return (
@@ -37,7 +75,7 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
             
             {/* 1. Article Title */}
             <h2 className="article-detail-title">
-              {article.title}
+              {activeArticle.title}
             </h2>
 
             {/* 2. Metadata strip */}
@@ -56,22 +94,21 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
                 <User size={15} /> WJBMR
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Calendar size={15} /> {article.date}
+                <Calendar size={15} /> {activeArticle.date}
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <BookOpen size={15} /> {article.volume || 'Volume 12'} No {article.issue ? article.issue.split(' ')[1] : '2'}
+                <BookOpen size={15} /> {activeArticle.volume || 'Volume 12'} No {activeArticle.issue ? activeArticle.issue.split(' ')[1] : '2'}
               </span>
               <a 
                 href={pdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                download
+                onClick={handleDownloadPdf}
                 style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '4px', 
                   color: 'var(--primary-color)',
-                  fontWeight: '700'
+                  fontWeight: '700',
+                  cursor: 'pointer'
                 }}
               >
                 <Download size={14} /> Download PDF
@@ -82,13 +119,13 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
             <div style={{ marginBottom: '24px', fontSize: '14px', lineHeight: '1.6' }}>
               <div style={{ marginBottom: '8px' }}>
                 <strong>Authors:</strong>{' '}
-                {typeof article.authors === 'string'
-                  ? <span dangerouslySetInnerHTML={{ __html: article.authors }} />
-                  : article.authors.map(a => a.name).join(', ')
+                {typeof activeArticle.authors === 'string'
+                  ? <span dangerouslySetInnerHTML={{ __html: activeArticle.authors }} />
+                  : activeArticle.authors.map(a => a.name).join(', ')
                 }
               </div>
               
-              {article.affiliations && (
+              {activeArticle.affiliations && (
                 <div style={{
                   color: 'var(--text-muted)',
                   fontSize: '13px',
@@ -96,19 +133,19 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
                   marginBottom: '12px',
                   whiteSpace: 'pre-line' // respects line breaks in input
                 }}>
-                  {article.affiliations}
+                  {activeArticle.affiliations}
                 </div>
               )}
 
-              {article.correspondingAuthor && (
+              {activeArticle.correspondingAuthor && (
                 <div style={{ fontSize: '13px', borderTop: '1px dotted var(--border-color)', paddingTop: '8px' }}>
-                  <strong>*Corresponding Author:</strong> {article.correspondingAuthor}
+                  <strong>*Corresponding Author:</strong> {activeArticle.correspondingAuthor}
                 </div>
               )}
 
-              {article.keywords && (
+              {activeArticle.keywords && (
                 <div style={{ marginTop: '12px', fontSize: '13px' }}>
-                  <strong>Keywords:</strong> <span style={{ color: 'var(--text-muted)' }}>{article.keywords}</span>
+                  <strong>Keywords:</strong> <span style={{ color: 'var(--text-muted)' }}>{activeArticle.keywords}</span>
                 </div>
               )}
             </div>
@@ -124,9 +161,7 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
               
               <a 
                 href={pdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                download
+                onClick={handleDownloadPdf}
                 className="submit-form-btn article-pdf-btn"
                 style={{
                   width: 'auto',
@@ -138,7 +173,8 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
                   gap: '8px',
                   textDecoration: 'none',
                   color: 'var(--bg-white)',
-                  flexShrink: 0
+                  flexShrink: 0,
+                  cursor: 'pointer'
                 }}
               >
                 <Download size={16} /> Download Full PDF
@@ -147,30 +183,39 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
 
             {/* 5. Abstract & Full HTML Content Render */}
             <div>
-              {/* Abstract section header */}
-              <h3 style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '22px',
-                color: 'var(--primary-dark)',
-                marginBottom: '14px',
-                borderBottom: '2px solid var(--border-color)',
-                paddingBottom: '6px'
-              }}>
-                {article.fullText ? 'Full Manuscript Text' : 'Abstract'}
-              </h3>
-
-              {article.isHtmlArticle ? (
-                /* Dynamic HTML Rendering */
-                <div 
-                  dangerouslySetInnerHTML={{ __html: article.fullText || article.abstract }} 
-                  className="html-article-renderer" 
-                  style={{ marginBottom: '32px' }}
-                />
+              {loadingFull ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 12px', color: 'var(--primary-color)' }} />
+                  Loading full article...
+                </div>
               ) : (
-                /* Static Text fallback */
-                <p className="text-block" style={{ fontSize: '15px', lineHeight: '1.7', marginBottom: '32px' }}>
-                  {article.abstract}
-                </p>
+                <>
+                  {/* Abstract section header */}
+                  <h3 style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '22px',
+                    color: 'var(--primary-dark)',
+                    marginBottom: '14px',
+                    borderBottom: '2px solid var(--border-color)',
+                    paddingBottom: '6px'
+                  }}>
+                    {activeArticle.fullText ? 'Full Manuscript Text' : 'Abstract'}
+                  </h3>
+
+                  {activeArticle.isHtmlArticle ? (
+                    /* Dynamic HTML Rendering */
+                    <div 
+                      dangerouslySetInnerHTML={{ __html: activeArticle.fullText || activeArticle.abstract }} 
+                      className="html-article-renderer" 
+                      style={{ marginBottom: '32px' }}
+                    />
+                  ) : (
+                    /* Static Text fallback */
+                    <p className="text-block" style={{ fontSize: '15px', lineHeight: '1.7', marginBottom: '32px' }}>
+                      {activeArticle.abstract}
+                    </p>
+                  )}
+                </>
               )}
             </div>
 
@@ -184,9 +229,7 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
             }}>
               <a 
                 href={pdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                download
+                onClick={handleDownloadPdf}
                 className="submit-form-btn"
                 style={{
                   width: 'auto',
@@ -197,7 +240,8 @@ export default function ArticleDetail({ article, articles = [], onNavigateToArti
                   gap: '8px',
                   background: 'var(--primary-color)',
                   textDecoration: 'none',
-                  color: 'var(--bg-white)'
+                  color: 'var(--bg-white)',
+                  cursor: 'pointer'
                 }}
               >
                 <Download size={18} /> Download Full PDF 
